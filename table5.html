@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafaBoxBD - লাইফটাইম ইনভেন্টরি লেজার</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Hind Siliguri', sans-serif; background-color: #f3f4f6; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        @media print { .no-print { display: none !important; } body { background: #fff; } }
+    </style>
+</head>
+<body class="pb-24">
+<div id="login-screen" class="hidden fixed inset-0 z-[100] bg-gray-50 overflow-y-auto">
+  <div class="min-h-full flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
+    <div class="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-3xl mb-3"><i class="fa-solid fa-boxes-stacked"></i></div>
+    <h1 class="text-xl font-extrabold text-gray-800">SafaBoxBD লেজার</h1>
+    <p class="text-sm text-gray-500 mb-6">লাইফটাইম স্টক, গড় দাম ও লাভের হিসাব</p>
+    <div id="login-main" class="w-full">
+      <button onclick="doLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-3 shadow"><i class="fa-brands fa-google mr-2"></i>Google দিয়ে লগইন</button>
+      <a href="?demo=1" class="block mt-4 text-sm text-emerald-700 underline">লগইন ছাড়া ডেমো দেখুন</a>
+    </div>
+    <div id="login-setup" class="hidden w-full text-left">
+      <p class="text-xs text-gray-600 mb-2">প্রথমবার সেটআপ: Firebase কনসোল থেকে কপি করা <b>firebaseConfig</b> এখানে পেস্ট করুন।</p>
+      <textarea id="fb-cfg" rows="8" class="w-full border rounded-lg p-2 text-xs" placeholder='const firebaseConfig = { apiKey: "...", ... };'></textarea>
+      <button onclick="saveFbConfig()" class="w-full mt-2 bg-emerald-600 text-white font-bold rounded-xl py-2.5">সেভ করুন</button>
+    </div>
+    <p id="login-msg" class="text-sm text-red-600 mt-4 whitespace-pre-wrap"></p>
+  </div>
+</div>
+
+
+<header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white sticky top-0 z-40 shadow-md no-print">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-boxes-packing text-2xl text-amber-300"></i>
+            <div>
+                <h1 class="text-lg font-bold leading-tight">SafaBoxBD লেজার</h1>
+                <p class="text-xs text-emerald-100">লাইফটাইম স্টক, গড় দাম ও লাভ</p>
+            </div>
+        </div>
+        <button onclick="syncNow(true)" class="text-xs bg-emerald-800 hover:bg-emerald-900 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+            <i id="sync-icon" class="fa-solid fa-cloud"></i>
+            <span id="sync-text">...</span>
+        </button>
+    </div>
+</header>
+
+<main id="view" class="max-w-2xl mx-auto px-3 pt-3"></main>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30 no-print">
+    <div class="max-w-2xl mx-auto grid grid-cols-4 text-[11px] font-semibold">
+        <button id="nav-home" onclick="goTab('home')" class="py-2.5 flex flex-col items-center gap-0.5 text-gray-500"><i class="fa-solid fa-chart-pie text-base"></i>হোম</button>
+        <button id="nav-stock" onclick="goTab('stock')" class="py-2.5 flex flex-col items-center gap-0.5 text-gray-500"><i class="fa-solid fa-cubes text-base"></i>স্টক</button>
+        <button id="nav-batch" onclick="goTab('batch')" class="py-2.5 flex flex-col items-center gap-0.5 text-gray-500"><i class="fa-solid fa-box-open text-base"></i>ব্যাচ</button>
+        <button id="nav-ledger" onclick="goTab('ledger')" class="py-2.5 flex flex-col items-center gap-0.5 text-gray-500"><i class="fa-solid fa-book text-base"></i>লেজার</button>
+    </div>
+</nav>
+
+<div id="modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden no-print">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl">
+        <div class="flex justify-between items-center border-b p-3">
+            <h3 id="modal-title" class="font-bold text-sm text-gray-800"></h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <div id="modal-body" class="p-3 overflow-y-auto text-xs space-y-2.5"></div>
+    </div>
+</div>
+
+<div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2 rounded-full shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-[60]"></div>
+
+<script>
+// ===PURE-START===
+function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function emptyAgg() { return { pktG: 0, pktCost: 0, bulkG: 0, bulkCost: 0, bulkRev: 0, eatG: 0, eatCost: 0, exp: 0 }; }
+
+// লেনদেনের লগ থেকে সব হিসাব বের করে (মুভিং ওয়েটেড এভারেজ)
+function compute(txs, batches) {
+    const sorted = txs.slice().sort((a, b) => (a.ts - b.ts) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const items = {}, order = [], costOf = {}, byRef = {}, blendOutCost = {};
+    const negatives = [];
+    const standalone = emptyAgg();
+    let expTotal = 0;
+
+    function get(n) {
+        if (!items[n]) {
+            order.push(n);
+            items[n] = { name: n, idx: order.length - 1, stock: 0, value: 0, lastAvg: 0,
+                boughtG: 0, boughtCost: 0, pktG: 0, pktCost: 0, bulkG: 0, bulkCost: 0, bulkRev: 0,
+                eatG: 0, eatCost: 0, blendG: 0, blendCost: 0, madeG: 0, madeCost: 0, adjG: 0,
+                minP: null, maxP: null, lastBuy: null, buys: [], isMixed: false };
+        }
+        return items[n];
+    }
+
+    sorted.forEach(t => {
+        if (t.type === 'EXPENSE') {
+            const a = num(t.amountTk);
+            expTotal += a; costOf[t.id] = a;
+            const rf = t.ref || '';
+            if (rf.indexOf('b_') === 0) { (byRef[rf] || (byRef[rf] = emptyAgg())).exp += a; }
+            else if (rf === '') standalone.exp += a;
+            return;
+        }
+        const it = get(t.item);
+        const g = num(t.grams);
+        if (t.type === 'OPENING' || t.type === 'RESTOCK') {
+            const p = num(t.pricePerKg), c = g / 1000 * p;
+            it.stock += g; it.value += c; it.boughtG += g; it.boughtCost += c;
+            it.lastBuy = p;
+            it.minP = it.minP === null ? p : Math.min(it.minP, p);
+            it.maxP = it.maxP === null ? p : Math.max(it.maxP, p);
+            if (it.stock > 1e-9) it.lastAvg = it.value / it.stock * 1000;
+            it.buys.push({ id: t.id, date: t.date, ts: t.ts, type: t.type, g, price: p, cost: c, avgAfter: it.lastAvg });
+            costOf[t.id] = c;
+        } else if (t.type === 'ADJUST_IN') {
+            const c = it.stock > 1e-9 ? g * it.value / it.stock : g / 1000 * it.lastAvg;
+            it.stock += g; it.value += c; it.adjG += g;
+            if (it.stock > 1e-9) it.lastAvg = it.value / it.stock * 1000;
+            costOf[t.id] = c;
+        } else if (t.type === 'BLEND_IN') {
+            const c = (t.ref && blendOutCost[t.ref] !== undefined) ? blendOutCost[t.ref] : num(t.amountTk);
+            it.stock += g; it.value += c; it.madeG += g; it.madeCost += c; it.isMixed = true; if (g > 0) it.lastBuy = c / g * 1000;
+            if (it.stock > 1e-9) it.lastAvg = it.value / it.stock * 1000;
+            costOf[t.id] = c;
+        } else {
+            let c;
+            if (it.stock > 1e-9) c = g * it.value / it.stock; else c = g / 1000 * it.lastAvg;
+            if (g > it.stock + 1e-6) negatives.push({ item: t.item, tx: t.id });
+            it.stock -= g; it.value -= c;
+            if (Math.abs(it.stock) < 1e-6) { it.stock = 0; it.value = 0; }
+            if (it.value < 0) it.value = 0;
+            costOf[t.id] = c;
+            const ref = t.ref || '';
+            let agg = null;
+            if (ref.indexOf('b_') === 0) { agg = byRef[ref] || (byRef[ref] = emptyAgg()); }
+            else if (ref === '') { agg = standalone; }
+            if (t.type === 'PACKET') { it.pktG += g; it.pktCost += c; if (agg) { agg.pktG += g; agg.pktCost += c; } }
+            else if (t.type === 'BULK') { const r = num(t.amountTk); it.bulkG += g; it.bulkCost += c; it.bulkRev += r; if (agg) { agg.bulkG += g; agg.bulkCost += c; agg.bulkRev += r; } }
+            else if (t.type === 'EAT') { it.eatG += g; it.eatCost += c; if (agg) { agg.eatG += g; agg.eatCost += c; } }
+            else if (t.type === 'BLEND_OUT') { it.blendG += g; it.blendCost += c; blendOutCost[t.ref] = (blendOutCost[t.ref] || 0) + c; }
+        }
+    });
+
+    const list = order.map(n => {
+        const it = items[n];
+        it.avg = it.stock > 1e-9 ? it.value / it.stock * 1000 : it.lastAvg;
+        it.lifeAvgBuy = it.boughtG > 0 ? it.boughtCost / it.boughtG * 1000 : (it.madeG > 0 ? it.madeCost / it.madeG * 1000 : 0);
+        it.repl = it.lastBuy === null ? it.avg : it.lastBuy;
+        it.usedG = it.pktG + it.bulkG + it.eatG + it.blendG;
+        it.usedCost = it.pktCost + it.bulkCost + it.eatCost + it.blendCost;
+        return it;
+    });
+
+    const bres = batches.slice().sort((a, b) => a.ts - b.ts).map(b => {
+        const a = byRef[b.id] || emptyAgg();
+        const packets = num(b.packets), pkg = num(b.packagingCost), sell = num(b.sellingPrice);
+        const totalPacketCost = a.pktCost + pkg;
+        const costPerPacket = totalPacketCost / (packets > 0 ? packets : 1);
+        const sold = (b.soldPackets === undefined || b.soldPackets === null || b.soldPackets === '') ? packets : num(b.soldPackets);
+        const packetRevenue = sold * sell;
+        const packetProfit = packetRevenue - totalPacketCost;
+        const bulkProfit = a.bulkRev - a.bulkCost;
+        const net = packetProfit + bulkProfit - a.eatCost - a.exp;
+        const margin = costPerPacket > 0 ? (sell - costPerPacket) / costPerPacket * 100 : 0;
+        return Object.assign({}, b, a, { packets, packagingCost: pkg, sellingPrice: sell, soldPackets: sold, otherCost: a.exp,
+            totalPacketCost, costPerPacket, packetRevenue, packetProfit, bulkProfit, net, margin });
+    });
+
+    const T = { stockValue: 0, boughtCost: 0, boughtG: 0, pktCost: 0, bulkCost: 0, bulkRev: 0, eatCost: 0, eatG: 0,
+        packaging: 0, packetRevenue: 0, packets: 0, profit: 0, expense: 0, adjG: 0 };
+    list.forEach(it => {
+        T.stockValue += it.value; T.boughtCost += it.boughtCost; T.boughtG += it.boughtG;
+        T.pktCost += it.pktCost; T.bulkCost += it.bulkCost; T.bulkRev += it.bulkRev;
+        T.eatCost += it.eatCost; T.eatG += it.eatG; T.adjG += it.adjG;
+    });
+    bres.forEach(b => { T.packaging += b.packagingCost; T.packetRevenue += b.packetRevenue; T.packets += b.packets; });
+    T.expense = expTotal;
+    T.profit = T.packetRevenue + T.bulkRev - T.pktCost - T.bulkCost - T.packaging - T.eatCost - T.expense;
+
+    return { items: list, map: items, batches: bres, byRef, standalone, costOf, totals: T, negatives };
+}
+
+// এই মুহূর্তের গড় দামে g গ্রামের খরচ
+function costNow(it, g) {
+    if (!it) return 0;
+    g = num(g);
+    return it.stock > 1e-9 ? g * it.value / it.stock : g / 1000 * it.lastAvg;
+}
+
+// ব্যাচ ও আইটেমভিত্তিক লাভ-বণ্টন।
+// প্যাকেট আইটেম আলাদা করে বিক্রি হয় না, তাই বিক্রয় মূল্য ও প্যাকেজিং খরচ আইটেমগুলোর মধ্যে ভাগ করা হয়:
+//   alloc='cost'   -> আইটেমের খরচের অনুপাতে (সব আইটেমের মার্জিন সমান)
+//   alloc='weight' -> আইটেমের ওজনের অনুপাতে
+//   alloc='price'  -> আইটেমের বিক্রয় মূল্য/কেজি × গ্রামের অনুপাতে (দাম না থাকলে গড় কেনা দর)
+// বাল্ক বিক্রি ও খাওয়া/ঘাটতি আইটেম-নির্দিষ্ট, তাই সরাসরি যায়। অন্যান্য খরচ (ডেলিভারি/বিজ্ঞাপন ইত্যাদি) আলাদা সারিতে।
+function itemProfit(txs, st, alloc, prices, rawBatches) {
+    const byB = {}, items = {}, itemBatches = {}, per = {};
+    txs.forEach(t => {
+        if (t.type !== 'PACKET' || !t.ref || t.ref.indexOf('b_') !== 0) return;
+        const bb = byB[t.ref] || (byB[t.ref] = {});
+        const r = bb[t.item] || (bb[t.item] = { g: 0, c: 0 });
+        r.g += num(t.grams); r.c += st.costOf[t.id] || 0;
+    });
+    const gi = n => items[n] || (items[n] = { name: n, pkt: 0, bulk: 0, eat: 0, net: 0, batchCost: 0, pktAll: 0 });
+    st.items.forEach(it => { const x = gi(it.name); x.bulk = it.bulkRev - it.bulkCost; x.eat = it.eatCost; x.pktAll = it.pktCost; });
+    let unalloc = 0;
+    st.batches.forEach(b => {
+        const bb = byB[b.id] || {}, names = Object.keys(bb);
+        const P = b.packets > 0 ? b.packets : 1, S = b.soldPackets, sell = b.sellingPrice, pkg = b.packagingCost;
+        const raw = (rawBatches || []).find(x => x.id === b.id) || {}, sp = raw.sp || {};
+        const priceOf = n => { const v = sp[n] !== undefined ? sp[n] : (prices || {})[n]; return v > 0 ? v : 0; };
+        if (!names.length) { unalloc += S * sell - pkg; per[b.id] = { rows: [], P, S, sell, pkg }; return; }
+        let sumC = 0, sumG = 0, sumV = 0; const val = {};
+        names.forEach(n => { sumC += bb[n].c; sumG += bb[n].g; val[n] = bb[n].g / 1000 * (priceOf(n) || (bb[n].g > 0 ? bb[n].c / bb[n].g * 1000 : 0)); sumV += val[n]; });
+        const rows = names.map(n => {
+            const r = bb[n];
+            const share = alloc === 'weight' ? (sumG > 0 ? r.g / sumG : 1 / names.length)
+                : alloc === 'price' ? (sumV > 0 ? val[n] / sumV : 1 / names.length)
+                : (sumC > 0 ? r.c / sumC : 1 / names.length);
+            const rev = S * sell * share, pk = pkg * share;
+            return { item: n, share, g: r.g, c: r.c, gPer: r.g / P, cPer: r.c / P, priceKg: r.g > 0 ? r.c / r.g * 1000 : 0,
+                revPer: sell * share, pkgPer: pk / P, profitPer: sell * share - r.c / P - pk / P, rev, pk, profit: rev - r.c - pk };
+        });
+        per[b.id] = { rows, P, S, sell, pkg };
+        rows.forEach(r => {
+            const x = gi(r.item); x.pkt += r.profit; x.batchCost += r.c;
+            (itemBatches[r.item] || (itemBatches[r.item] = [])).push({ id: b.id, date: b.date, g: r.g, c: r.c, rev: r.rev + 0, pk: r.pk, profit: r.profit });
+        });
+    });
+    const list = Object.keys(items).map(n => {
+        const x = items[n];
+        const loose = Math.max(0, x.pktAll - x.batchCost);   // ব্যাচ ছাড়া প্যাকেটে গেছে (আয় নেই)
+        x.pkt -= loose; x.loose = loose;
+        x.net = x.pkt + x.bulk - x.eat;
+        return x;
+    }).filter(x => Math.abs(x.pkt) + Math.abs(x.bulk) + Math.abs(x.eat) > 1e-9);
+    list.sort((a, b) => b.net - a.net);
+    const sumItems = list.reduce((s, x) => s + x.net, 0);
+    const expense = st.totals.expense;
+    return { per, items: list, itemBatches, unalloc, sumItems, expense, finalNet: sumItems + unalloc - expense };
+}
+// ===PURE-END===
+
+// ---------- সেটআপ ও ডাটা ----------
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyC2bmAtHLQNt1nobq8y-yyDaYAsNWIEKgc",
+    authDomain: "demomixfood.firebaseapp.com",
+    projectId: "demomixfood",
+    storageBucket: "demomixfood.firebasestorage.app",
+    messagingSenderId: "905891531269",
+    appId: "1:905891531269:web:fe640a761c23f7377aea6c"
+};   // Firebase ওয়েব কনফিগ গোপন নয়; ডাটা সুরক্ষিত থাকে Firestore সিকিউরিটি রুলস দিয়ে
+const DEMO = /[?&]demo=1\b/.test(location.search);   // ?demo=1 দিলে ডেমো মোড: লগইন ছাড়া, আলাদা স্টোরেজ, নমুনা ডাটা
+let LS_KEY = DEMO ? 'safabox_demo_ledger_v2' : 'safabox_cloud_v3_anon';
+let LS_DRAFT = DEMO ? 'safabox_demo_draft_v2' : 'safabox_cloud_draft_v3_anon';
+const LEGACY_KEY = 'safabox_ledger_v2';   // পুরোনো (Apps Script) সংস্করণের লোকাল ডাটা
+let cloudUser = null;
+const ADMIN_EMAIL = 'bpsujon0842@gmail.com';   // শুধু এই Gmail অ্যাডমিন; আসল নিয়ন্ত্রণ Firestore রুলসে
+const SUPPORT_WHATSAPP = '8801614962727';      // মেয়াদ শেষের ব্যানারে WhatsApp যোগাযোগ (আন্তর্জাতিক ফরম্যাটে নম্বর)
+const TRIAL_DAYS = 7;
+let acc = { known: false, ok: true, plan: '', untilMs: 0 };
+
+const DEFAULT_ITEMS = [
+    ['কাঠবাদাম', 1320], ['কাজুবাদাম', 1380], ['আখরোট', 1000], ['চীনাবাদাম', 320], ['কিসমিস', 870],
+    ['কুমড়ো বীজ', 800], ['সূর্যমুখী বীজ', 250], ['সাদা তিল', 235], ['খুরমা', 240], ['কালো জিরা', 500]
+];
+const TYPE_LABEL = { OPENING: 'শুরুর স্টক', RESTOCK: 'রিস্টক', PACKET: 'প্যাকেট', BULK: 'বাল্ক বিক্রি', EAT: 'খাওয়া/ঘাটতি', BLEND_OUT: 'ব্লেন্ডে ব্যবহার', BLEND_IN: 'ব্লেন্ড তৈরি', ADJUST_IN: 'ওজন সংশোধন (বেশি)', EXPENSE: 'অন্যান্য খরচ' };
+const TYPE_COLOR = { OPENING: 'bg-sky-100 text-sky-800', RESTOCK: 'bg-sky-100 text-sky-800', PACKET: 'bg-emerald-100 text-emerald-800', BULK: 'bg-blue-100 text-blue-800', EAT: 'bg-rose-100 text-rose-800', BLEND_OUT: 'bg-purple-100 text-purple-800', BLEND_IN: 'bg-purple-100 text-purple-800', ADJUST_IN: 'bg-amber-100 text-amber-800', EXPENSE: 'bg-orange-100 text-orange-800' };
+
+function loadDb() {
+    try {
+        const d = JSON.parse(localStorage.getItem(LS_KEY));
+        if (d && Array.isArray(d.txs)) return { txs: d.txs, batches: d.batches || [], pendingDeleteTx: d.pendingDeleteTx || [], pendingDeleteBatch: d.pendingDeleteBatch || [], running: d.running || null, runningDirty: !!d.runningDirty, bkMap: d.bkMap || {}, prices: d.prices || {}, pricesDirty: !!d.pricesDirty };
+    } catch (e) {}
+    return { txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false };
+}
+let db = loadDb();
+let state = compute(db.txs, db.batches);
+let ui = { tab: 'home', ledgerTab: 'batches', stockSort: 'cost', expanded: {}, openBatch: {}, txItem: '', txType: '', txQ: '', txView: 'table', alloc: (function () { try { const v = localStorage.getItem('sbx_alloc'); return v === 'weight' || v === 'price' ? v : 'cost'; } catch (e) { return 'cost'; } })(), itemOpen: {}, txLimit: 60, bfOpen: {} };
+
+function persist() { try { ensureBk(); localStorage.setItem(LS_KEY, JSON.stringify(db)); } catch (e) {} }
+function recompute() { state = compute(db.txs, db.batches); }
+function refresh() { recompute(); persist(); render(); scheduleSync(); }
+
+// ---------- ছোট ফাংশন ----------
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 2) => { n = Number(n) || 0; if (Math.abs(n) < Math.pow(10, -d) / 2) n = 0; return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); };
+const tk = n => '৳ ' + fmt(n);
+const fg = n => { n = Number(n) || 0; return (Math.round(n * 10) / 10).toLocaleString('en-US') + ' g'; };
+const round = (n, d) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+const profitCls = n => n >= 0 ? 'text-emerald-700' : 'text-red-600';
+function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function dateStr(ms) { const d = new Date(ms); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function el(id) { return document.getElementById(id); }
+function setVal(id, v) { const e = el(id); if (e) e.value = v; }
+function setHtml(id, v) { const e = el(id); if (e) e.innerHTML = v; }
+function toast(msg) { const t = el('toast'); t.textContent = msg; t.classList.remove('opacity-0'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('opacity-0'), 2600); }
+const INP = 'w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm text-center font-semibold';
+const INP_L = 'w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm font-semibold';
+
+function makeTx(type, item, grams, pricePerKg, amountTk, ref, note, ts) {
+    return { id: uid('t_'), ts, date: dateStr(ts), type, item, grams: round(grams, 3), pricePerKg: round(pricePerKg, 4), amountTk: round(amountTk, 4), ref: ref || '', note: note || '', synced: false };
+}
+
+// ---------- নেভিগেশন ও রেন্ডার ----------
+function goTab(t) { ui.tab = t; render(); window.scrollTo(0, 0); }
+function render() {
+    updateBadge();
+    ['home', 'stock', 'batch', 'ledger'].forEach(t => {
+        const b = el('nav-' + t);
+        b.className = 'py-2.5 flex flex-col items-center gap-0.5 ' + (ui.tab === t ? 'text-emerald-700' : 'text-gray-500');
+    });
+    let html = '';
+    if (ui.tab === 'home') html = viewHome();
+    else if (ui.tab === 'stock') html = viewStock();
+    else if (ui.tab === 'batch') html = viewBatch();
+    else html = viewLedger();
+    el('view').innerHTML = html;
+    if (!db.txs.length) obRender();
+    else if (ui.tab === 'batch') batchPreview();
+}
+
+// ---------- হোম ----------
+function viewHome() {
+    if (!db.txs.length) return viewOnboarding();
+    const T = state.totals;
+    const maxUsed = Math.max(1, ...state.items.map(i => i.usedCost));
+    const eaten = state.items.filter(i => i.eatG > EPS || i.eatCost > 0.005).sort((a, b) => b.eatCost - a.eatCost);
+    const maxEat = Math.max(1, ...eaten.map(i => i.eatCost));
+    const used = state.items.filter(i => i.usedCost > 0).sort((a, b) => b.usedCost - a.usedCost);
+    const low = state.items.filter(i => i.stock < 200);
+    return `
+    ${state.negatives.length ? `<div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-2.5 mb-3"><i class="fa-solid fa-triangle-exclamation mr-1"></i>সতর্কতা: ${esc([...new Set(state.negatives.map(n => n.item))].join(', '))} এর স্টক মাইনাসে গেছে। লেজার থেকে ভুল এন্ট্রি ঠিক করুন।</div>` : ''}
+    ${db.running ? `<button onclick="goTab('batch')" class="w-full text-left bg-amber-50 border border-amber-300 text-amber-900 text-xs rounded-xl p-2.5 mb-3"><i class="fa-solid fa-hourglass-half mr-1"></i><b>একটি ব্যাচ চলছে</b> (শুরু: ${esc(db.running.date)}). প্যাকেট শেষ হলে এখানে চেপে শেষের ওজন দিন।</button>` : ''}
+    ${T.adjG > Math.max(100, T.boughtG * 0.02) ? `<div class="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-2.5 mb-3"><i class="fa-solid fa-scale-unbalanced mr-1"></i>মাপায় লেজারের চেয়ে মোট <b>${fg(T.adjG)}</b> বেশি পাওয়া গেছে। আগের কোনো এন্ট্রি বা স্কেল যাচাই করুন।</div>` : ''}
+    <div class="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm bg-gradient-to-r from-emerald-50/60 to-teal-50/60 mb-3">
+        <div class="flex items-center justify-between">
+            <div>
+                <span class="text-xs text-gray-600 font-bold block">লাইফটাইম নিট লাভ</span>
+                <span class="text-[11px] text-gray-400">${state.batches.length}টি ব্যাচ • ${fmt(T.packets, 0)} প্যাকেট</span>
+            </div>
+            <span class="text-2xl font-extrabold ${profitCls(T.profit)}">${tk(T.profit)}</span>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mb-3">
+        ${statCard('fa-warehouse', 'emerald', 'বর্তমান স্টকের মূল্য', tk(T.stockValue))}
+        ${statCard('fa-cart-shopping', 'sky', 'মোট কেনা খরচ', tk(T.boughtCost))}
+        ${statCard('fa-utensils', 'rose', 'খাওয়া/ঘাটতি খরচ', tk(T.eatCost))}
+        ${statCard('fa-box', 'amber', 'ব্যবহার (প্যাকেট+বাল্ক)', tk(T.pktCost + T.bulkCost))}
+    </div>
+
+    <div class="grid grid-cols-6 gap-1.5 mb-3 no-print">
+        ${qa('fa-box-open', 'emerald', 'নতুন ব্যাচ', "goTab('batch')")}
+        ${qa('fa-cart-plus', 'sky', 'রিস্টক', 'openRestock()')}
+        ${qa('fa-utensils', 'rose', 'খাওয়া', 'openEat()')}
+        ${qa('fa-scale-balanced', 'blue', 'বাল্ক', 'openBulk()')}
+        ${qa('fa-blender', 'purple', 'ব্লেন্ড', 'openBlend()')}
+        ${qa('fa-receipt', 'orange', 'খরচ', 'openExpense()')}
+    </div>
+
+    <div class="bg-gray-800 text-white p-4 rounded-xl shadow-lg mb-3">
+        <h3 class="text-sm font-bold text-amber-400 mb-2 border-b border-gray-700 pb-1">লাইফটাইম হিসাব বিবরণী</h3>
+        <div class="text-xs space-y-1.5 text-gray-300">
+            ${row2('প্যাকেট বিক্রি থেকে আয়', tk(T.packetRevenue), 'text-emerald-300')}
+            ${row2('বাল্ক বিক্রি থেকে আয়', tk(T.bulkRev), 'text-emerald-300')}
+            ${row2('প্যাকেটে কাঁচামাল খরচ', '- ' + tk(T.pktCost), 'text-rose-300')}
+            ${row2('বাল্ক বিক্রির কাঁচামাল খরচ', '- ' + tk(T.bulkCost), 'text-rose-300')}
+            ${row2('প্যাকেজিং খরচ', '- ' + tk(T.packaging), 'text-rose-300')}
+            ${row2('খাওয়া/ঘাটতি খরচ (' + fg(T.eatG) + ')', '- ' + tk(T.eatCost), 'text-rose-300')}
+            ${row2('অন্যান্য খরচ (ডেলিভারি, বিজ্ঞাপন ইত্যাদি)', '- ' + tk(T.expense), 'text-rose-300')}
+            <div class="flex justify-between text-sm font-extrabold border-t border-gray-700 pt-1.5 ${T.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}"><span>নিট লাভ</span><span>${tk(T.profit)}</span></div>
+        </div>
+    </div>
+
+    <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm mb-3">
+        <h3 class="text-sm font-bold text-gray-700 mb-2 border-b pb-1"><i class="fa-solid fa-ranking-star text-amber-500 mr-1.5"></i>কোন আইটেমে কত খরচ হয়েছে</h3>
+        ${used.length ? used.map(i => `
+            <div class="mb-2">
+                <div class="flex justify-between text-xs"><span class="font-bold text-gray-800">${esc(i.name)}</span><span class="text-gray-600">${fg(i.usedG)} • <b class="text-emerald-700">${tk(i.usedCost)}</b></span></div>
+                <div class="h-2 bg-gray-100 rounded-full overflow-hidden mt-0.5"><div class="h-full bg-emerald-500" style="width:${Math.max(2, i.usedCost / maxUsed * 100)}%"></div></div>
+            </div>`).join('') : '<p class="text-xs text-gray-400 text-center py-2">এখনো কোনো ব্যবহার নেই</p>'}
+    </div>
+
+    <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm mb-3">
+        <h3 class="text-sm font-bold text-gray-700 mb-2 border-b pb-1"><i class="fa-solid fa-utensils text-rose-500 mr-1.5"></i>কোন আইটেম কতটুকু খাওয়া/ঘাটতি হয়েছে</h3>
+        ${eaten.length ? eaten.map(i => `
+            <div class="mb-2">
+                <div class="flex justify-between text-xs"><span class="font-bold text-gray-800">${esc(i.name)}</span><span class="text-gray-600">${fg(i.eatG)} • <b class="text-rose-600">${tk(i.eatCost)}</b></span></div>
+                <div class="h-2 bg-gray-100 rounded-full overflow-hidden mt-0.5"><div class="h-full bg-rose-400" style="width:${Math.max(2, i.eatCost / maxEat * 100)}%"></div></div>
+            </div>`).join('') + `<div class="flex justify-between text-xs font-extrabold border-t pt-1.5 mt-1"><span class="text-gray-700">মোট</span><span class="text-gray-700">${fg(T.eatG)} • <span class="text-rose-600">${tk(T.eatCost)}</span></span></div>` : '<p class="text-xs text-gray-400 text-center py-2">এখনো কোনো খাওয়া/ঘাটতি নেই</p>'}
+    </div>
+
+    ${low.length ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 mb-3"><i class="fa-solid fa-bell mr-1"></i><b>কম স্টক (২০০g এর নিচে):</b> ${esc(low.map(i => i.name + ' (' + fg(i.stock) + ')').join(', '))}</div>` : ''}
+
+    <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm mb-4 no-print">
+        <h3 class="text-sm font-bold text-gray-700 mb-2 border-b pb-1"><i class="fa-solid fa-gear text-gray-500 mr-1.5"></i>টুলস</h3>
+        ${cloudUser ? `<div class="text-[11px] text-gray-500 mb-2"><i class="fa-solid fa-user mr-1"></i>${esc(cloudUser.email || cloudUser.name || '')}</div>` : ''}
+        <div class="grid grid-cols-2 gap-2 text-[11px] font-semibold">
+            <button onclick="exportTxCsv()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-file-csv mr-1"></i>লেনদেন CSV</button>
+            <button onclick="exportItemsCsv()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-file-csv mr-1"></i>আইটেম সামারি CSV</button>
+            <button onclick="window.print()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-print mr-1"></i>প্রিন্ট / PDF</button>
+            <button onclick="doLogout()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-right-from-bracket mr-1"></i>লগআউট</button>
+            <button onclick="importLegacy(true)" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>পুরোনো ডাটা তুলুন</button>
+            ${isAdminUser() ? '<button onclick="openAdmin()" class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2"><i class="fa-solid fa-user-shield mr-1"></i>অ্যাডমিন: সাবস্ক্রিপশন ও অনুমোদন</button>' : ''}
+            <button onclick="clearLocal()" class="col-span-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg py-2"><i class="fa-solid fa-rotate mr-1"></i>এই ফোনের কপি মুছে ক্লাউড থেকে নতুন করে লোড (ক্লাউডের ডাটা মুছবে না)</button>
+        </div>
+    </div>`;
+}
+function statCard(icon, color, label, value) {
+    return `<div class="bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-2.5">
+        <div class="p-2 bg-${color}-100 text-${color}-600 rounded-lg"><i class="fa-solid ${icon} text-lg"></i></div>
+        <div><span class="text-[11px] text-gray-500 font-medium block">${label}</span><span class="text-sm font-bold text-gray-800">${value}</span></div></div>`;
+}
+function qa(icon, color, label, fn) {
+    return `<button onclick="${fn}" class="bg-white border border-gray-200 hover:bg-${color}-50 rounded-xl py-2 flex flex-col items-center gap-1 shadow-sm"><i class="fa-solid ${icon} text-${color}-600"></i><span class="text-[10px] font-bold text-gray-700">${label}</span></button>`;
+}
+function row2(l, v, cls) { return `<div class="flex justify-between ${cls || ''}"><span>${l}</span><span class="font-bold">${v}</span></div>`; }
+
+// ---------- শুরুর স্টক (অনবোর্ডিং) ----------
+let ob = DEFAULT_ITEMS.map(x => ({ name: x[0], g: '1000', p: String(x[1]) }));
+function viewOnboarding() {
+    return `<div class="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm mb-4">
+        <h2 class="text-sm font-bold text-gray-800 mb-1"><i class="fa-solid fa-flag-checkered text-emerald-600 mr-1.5"></i>শুরুর স্টক বসান</h2>
+        <p class="text-xs text-gray-500 mb-3">এখন আপনার কাছে প্রতিটি আইটেম কত গ্রাম আছে এবং কেজি প্রতি কত টাকায় কিনেছেন, সেটা একবার বসান। এরপর থেকে সব হিসাব এই লেজারে জমা হবে। যে আইটেম নেই, তার গ্রাম ০ রাখুন বা মুছে দিন।</p>
+        <div class="grid grid-cols-12 gap-1.5 text-[10px] text-gray-500 font-bold mb-1 px-0.5"><span class="col-span-5">আইটেম</span><span class="col-span-3 text-center">গ্রাম</span><span class="col-span-3 text-center">কেজি দর ৳</span><span></span></div>
+        <div id="ob-rows"></div>
+        <button onclick="obAdd()" class="text-xs text-emerald-700 font-bold mt-1"><i class="fa-solid fa-plus-circle mr-1"></i>আরেকটি আইটেম</button>
+        <button onclick="obSave()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow">লেজার শুরু করুন</button>
+    </div>`;
+}
+function obRender() {
+    const c = el('ob-rows'); if (!c) return;
+    c.innerHTML = ob.map((r, i) => `<div class="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
+        <input class="col-span-5 ${INP_L} !p-1.5 !text-xs" value="${esc(r.name)}" oninput="ob[${i}].name=this.value">
+        <input type="number" inputmode="decimal" class="col-span-3 ${INP} !p-1.5 !text-xs" value="${esc(r.g)}" oninput="ob[${i}].g=this.value">
+        <input type="number" inputmode="decimal" class="col-span-3 ${INP} !p-1.5 !text-xs" value="${esc(r.p)}" oninput="ob[${i}].p=this.value">
+        <button onclick="obDel(${i})" class="text-red-400 text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
+}
+function obAdd() { ob.push({ name: '', g: '', p: '' }); obRender(); }
+function obDel(i) { ob.splice(i, 1); obRender(); }
+function obSave() { if (!canWrite()) return;
+    const rows = ob.filter(r => r.name.trim() && num(r.g) > 0);
+    if (!rows.length) { alert('কমপক্ষে একটি আইটেমের নাম ও গ্রাম লিখুন'); return; }
+    const names = rows.map(r => r.name.trim());
+    if (new Set(names).size !== names.length) { alert('একই নামে একাধিক আইটেম আছে'); return; }
+    const now = Date.now();
+    rows.forEach((r, k) => db.txs.push(makeTx('OPENING', r.name.trim(), num(r.g), num(r.p), num(r.g) / 1000 * num(r.p), '', 'শুরুর স্টক', now + k)));
+    refresh(); toast('শুরুর স্টক সেভ হয়েছে');
+}
+
+// ---------- স্টক ----------
+function viewStock() {
+    if (!db.txs.length) return viewOnboarding();
+    const sorts = { cost: 'খরচ বেশি', low: 'স্টক কম', val: 'স্টক মূল্য', name: 'নাম' };
+    let list = state.items.slice();
+    if (ui.stockSort === 'cost') list.sort((a, b) => b.usedCost - a.usedCost);
+    else if (ui.stockSort === 'low') list.sort((a, b) => a.stock - b.stock);
+    else if (ui.stockSort === 'val') list.sort((a, b) => b.value - a.value);
+    else list.sort((a, b) => a.name.localeCompare(b.name));
+    const T = state.totals;
+    return `
+    <div class="flex justify-between items-center mb-2 px-1">
+        <h2 class="text-base font-bold text-gray-800"><i class="fa-solid fa-cubes text-emerald-600 mr-1"></i>আইটেমভিত্তিক লাইফটাইম (${state.items.length})</h2>
+        <button onclick="openRestock()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-sm"><i class="fa-solid fa-plus mr-1"></i>কেনা / নতুন আইটেম</button>
+    </div>
+    <div class="flex gap-1.5 mb-2 overflow-x-auto text-[11px] font-semibold">
+        ${Object.keys(sorts).map(k => `<button onclick="ui.stockSort='${k}';render()" class="px-2.5 py-1 rounded-full border whitespace-nowrap ${ui.stockSort === k ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600'}">${sorts[k]}</button>`).join('')}
+        <button onclick="openBlend()" class="px-2.5 py-1 rounded-full border whitespace-nowrap bg-purple-600 text-white border-purple-600"><i class="fa-solid fa-blender mr-1"></i>ব্লেন্ড বানান</button>
+    </div>
+    <div class="space-y-2.5 mb-4">${list.map(itemCard).join('')}</div>
+
+    <div class="border rounded-xl overflow-hidden shadow-sm bg-white mb-4">
+        <div class="bg-indigo-50 text-indigo-900 font-bold text-xs p-2 border-b">সব আইটেম এক নজরে</div>
+        <div class="overflow-x-auto"><table class="w-full text-left text-[11px] whitespace-nowrap">
+            <thead class="bg-gray-50 text-gray-600"><tr><th class="p-2">আইটেম</th><th class="p-2 text-right">মোট কেনা</th><th class="p-2 text-right">মোট ব্যবহার</th><th class="p-2 text-right">ব্যবহারের খরচ</th><th class="p-2 text-right">স্টক</th><th class="p-2 text-right">গড় দর</th><th class="p-2 text-right">স্টক মূল্য</th></tr></thead>
+            <tbody class="divide-y">${state.items.map(i => `<tr><td class="p-2 font-bold">${esc(i.name)}</td><td class="p-2 text-right">${fg(i.boughtG + i.madeG)}</td><td class="p-2 text-right text-blue-700">${fg(i.usedG)}</td><td class="p-2 text-right text-rose-600">${tk(i.usedCost)}</td><td class="p-2 text-right text-amber-700 font-bold">${fg(i.stock)}</td><td class="p-2 text-right">৳${fmt(i.avg)}</td><td class="p-2 text-right font-bold text-emerald-700">${tk(i.value)}</td></tr>`).join('')}</tbody>
+            <tfoot class="bg-gray-50 font-bold"><tr><td class="p-2">মোট</td><td></td><td></td><td class="p-2 text-right text-rose-600">${tk(state.items.reduce((s, i) => s + i.usedCost, 0))}</td><td></td><td></td><td class="p-2 text-right text-emerald-700">${tk(T.stockValue)}</td></tr></tfoot>
+        </table></div>
+    </div>`;
+}
+function itemCard(it) {
+    const open = !!ui.expanded[it.name];
+    const kv = (l, v) => `<div class="bg-gray-50 rounded-lg p-1.5"><span class="text-[10px] text-gray-500 block">${l}</span><span class="font-bold text-gray-800">${v}</span></div>`;
+    return `<div class="rounded-xl border shadow-sm overflow-hidden ${it.isMixed ? 'bg-purple-50/40 border-purple-200' : 'bg-white border-gray-200'}">
+        <div onclick="toggleItem(${it.idx})" class="p-3 flex items-center justify-between cursor-pointer select-none hover:bg-gray-50/80">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400 transition-transform ${open ? 'rotate-90 text-emerald-600' : ''}"></i>
+                <div>
+                    <div class="flex items-center gap-1.5"><span class="font-bold text-gray-800 text-sm">${esc(it.name)}</span>${it.isMixed ? '<span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">মিক্সড</span>' : ''}</div>
+                    <span class="text-[11px] text-gray-500 block">স্টক: <b class="text-amber-800">${fg(it.stock)}</b> • গড় ৳${fmt(it.avg)}/কেজি${it.lastBuy !== null ? ' • শেষ কেনা <b class="text-sky-700">৳' + fmt(it.lastBuy) + '</b>' : ''}</span>
+                    ${it.isMixed ? `<button onclick="event.stopPropagation();openBlend(decodeURIComponent('${encodeURIComponent(it.name)}'))" class="mt-1 text-[11px] font-bold text-purple-700 border border-purple-300 rounded-full px-2 py-0.5 no-print"><i class="fa-solid fa-circle-plus mr-1"></i>ব্লেন্ড বাড়ান</button>` : ''}
+                </div>
+            </div>
+            <div class="text-right"><span class="text-[10px] text-gray-400 block">স্টক মূল্য</span><span class="text-sm font-extrabold text-emerald-700">${tk(it.value)}</span></div>
+        </div>
+        ${open ? `<div class="p-3 pt-2 border-t border-gray-100 space-y-2 text-xs">
+            <div class="grid grid-cols-2 gap-1.5">
+                ${kv('মোট কেনা', fg(it.boughtG) + ' • ' + tk(it.boughtCost))}
+                ${kv('লাইফটাইম গড় কেনা দর', '৳ ' + fmt(it.lifeAvgBuy) + '/কেজি')}
+                ${kv('সর্বনিম্ন / সর্বোচ্চ দর', it.minP === null ? '-' : '৳' + fmt(it.minP) + ' / ৳' + fmt(it.maxP))}
+                ${it.lastBuy === null ? '' : kv('সর্বশেষ কেনা দর', '৳ ' + fmt(it.lastBuy) + '/কেজি' + (it.avg > 0 && Math.abs(it.lastBuy - it.avg) / it.avg > 0.1 ? ' ⚠' : ''))}
+                ${kv('মোট ব্যবহার', fg(it.usedG) + ' • ' + tk(it.usedCost))}
+                ${kv('প্যাকেটে', fg(it.pktG) + ' • ' + tk(it.pktCost))}
+                ${kv('বাল্ক বিক্রি', fg(it.bulkG) + ' • আয় ' + tk(it.bulkRev))}
+                ${kv('খাওয়া/ঘাটতি', fg(it.eatG) + ' • ' + tk(it.eatCost))}
+                ${it.blendG > 0 ? kv('ব্লেন্ডে গেছে', fg(it.blendG) + ' • ' + tk(it.blendCost)) : ''}
+                ${it.madeG > 0 ? kv('ব্লেন্ড তৈরি হয়েছে', fg(it.madeG) + ' • ' + tk(it.madeCost)) : ''}
+                ${it.adjG > 0 ? kv('ওজন সংশোধনে বেড়েছে', fg(it.adjG)) : ''}
+            </div>
+            ${it.buys.length ? `<div><b class="text-gray-700 block mb-1">কেনার ইতিহাস ও গড় দরের পরিবর্তন</b>
+                <div class="border rounded-lg overflow-hidden"><table class="w-full text-[11px]"><thead class="bg-gray-50 text-gray-500"><tr><th class="p-1.5 text-left">তারিখ</th><th class="p-1.5 text-right">পরিমাণ</th><th class="p-1.5 text-right">কেজি দর</th><th class="p-1.5 text-right">নতুন গড়</th></tr></thead>
+                <tbody class="divide-y">${it.buys.slice().reverse().map(b => `<tr><td class="p-1.5">${esc(b.date.split(' ')[0])}${b.type === 'OPENING' ? ' <span class="text-[9px] text-sky-700">(শুরু)</span>' : ''}</td><td class="p-1.5 text-right">${fg(b.g)}</td><td class="p-1.5 text-right">৳${fmt(b.price)}</td><td class="p-1.5 text-right font-bold">৳${fmt(b.avgAfter)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+            <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2 no-print">
+                <div class="flex items-center gap-2"><label class="font-bold text-emerald-900 whitespace-nowrap">বিক্রয় মূল্য/কেজি</label>
+                <input type="number" inputmode="decimal" value="${db.prices && db.prices[it.name] ? db.prices[it.name] : ''}" placeholder="ঐচ্ছিক" onchange="setSellPrice(decodeURIComponent('${encodeURIComponent(it.name)}'), this.value)" class="flex-1 min-w-0 border rounded-lg p-1.5 text-center font-semibold"></div>
+                <p class="text-[10px] text-gray-500 mt-1">আলাদা করে বেচলে যে দামে বেচতেন। শুধু "আইটেম লাভ"-এর ভাগে কাজে লাগে, স্টক বা খরচের হিসাবে নয়।</p>
+            </div>
+            <div class="flex gap-1.5 no-print">
+                <button onclick="openRestock(${it.idx})" class="flex-1 bg-sky-50 text-sky-700 border border-sky-200 font-semibold py-1.5 rounded-lg"><i class="fa-solid fa-cart-plus mr-1"></i>রিস্টক</button>
+                <button onclick="openEat(${it.idx})" class="flex-1 bg-rose-50 text-rose-700 border border-rose-200 font-semibold py-1.5 rounded-lg"><i class="fa-solid fa-utensils mr-1"></i>খাওয়া</button>
+                <button onclick="openBulk(${it.idx})" class="flex-1 bg-blue-50 text-blue-700 border border-blue-200 font-semibold py-1.5 rounded-lg"><i class="fa-solid fa-scale-balanced mr-1"></i>বাল্ক</button>
+            </div>
+        </div>` : ''}
+    </div>`;
+}
+function toggleItem(idx) { const n = state.items[idx].name; ui.expanded[n] = !ui.expanded[n]; render(); }
+
+// ---------- ব্যাচ (২ ধাপ: শুরুর ওজন → শেষের ওজন) ----------
+function loadBf() { try { const d = JSON.parse(localStorage.getItem(LS_DRAFT)); if (d && d.rows && d.v === 2) return d; } catch (e) {} return { v: 2, packets: '', packaging: '', sell: '', sold: '', other: '', note: '', rows: {} }; }
+let bf = loadBf();
+function saveDraft() { try { localStorage.setItem(LS_DRAFT, JSON.stringify(bf)); } catch (e) {} }
+function bfReset() { bf = { v: 2, packets: '', packaging: '', sell: '', sold: '', other: '', note: '', rows: {} }; saveDraft(); }
+const EPS = 0.01;
+function batchPreview() { if (db.running) ffPreview(); else sfPreview(); }
+function bfSet(i, list, field, val) {
+    const it = list[i];
+    const r = bf.rows[it.name] || (bf.rows[it.name] = {});
+    r[field] = val; saveDraft();
+}
+
+function viewBatch() {
+    if (!db.txs.length) return viewOnboarding();
+    return db.running ? viewBatchFinish() : viewBatchStart();
+}
+
+// ===== ধাপ ১: প্যাকেট শুরুর আগে ওজন =====
+function viewBatchStart() {
+    return `
+    <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 mb-3 text-xs text-sky-900">
+        <b><i class="fa-solid fa-1 mr-1"></i>ধাপ ১ / ২: প্যাকেট শুরুর আগে ওজন মাপুন</b>
+        <p class="mt-1 text-sky-800">যে আইটেম প্যাকেটে ব্যবহার করবেন শুধু সেগুলোর ওজন লিখুন (লেজারের স্টকই ঠিক থাকলে "লেজারের স্টক বসান" বাটন চাপুন), বাকি ঘর ফাঁকা রাখুন। লেজারের চেয়ে কম হলে ঘাটতি/খাওয়া ধরা হবে। বেশি হলে স্টক ঠিক করা হবে, লাভে প্রভাব পড়বে না।</p>
+    </div>
+    <button onclick="sfAutoAll()" class="w-full mb-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold py-2 rounded-xl"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>সব আইটেমের লেজারের স্টক একসাথে বসান / তুলে নিন</button>
+    <div class="space-y-2.5" id="sf-items">${state.items.map(sfItem).join('')}</div>
+    <input type="text" value="${esc(bf.note)}" oninput="bf.note=this.value;saveDraft()" class="${INP_L} mt-3 !text-xs" placeholder="ব্যাচের নোট (ইচ্ছাধীন)">
+    <div class="bg-gray-800 text-white p-4 rounded-xl shadow-lg mt-3 mb-3">
+        <h3 class="text-sm font-bold text-amber-400 mb-2 border-b border-gray-700 pb-1">শুরুর হিসাব (প্রিভিউ)</h3>
+        <div class="text-xs space-y-1.5 text-gray-300" id="sf-summary"></div>
+    </div>
+    <div id="sf-errors" class="text-xs text-red-600 mb-2"></div>
+    <div class="flex gap-2 mb-4 no-print">
+        <button onclick="sfClear()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-lg text-xs border">ফর্ম মুছুন</button>
+        <button onclick="sfSave()" class="flex-[2] bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-lg text-sm shadow"><i class="fa-solid fa-play mr-1.5"></i>ব্যাচ শুরু করুন</button>
+    </div>`;
+}
+function autoCls(on) { return 'mt-1 w-full text-[10px] font-bold rounded-lg py-1 border ' + (on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300'); }
+function autoLbl(on) { return on ? '<i class="fa-solid fa-toggle-on mr-1"></i>লেজারের স্টকই ঠিক' : '<i class="fa-solid fa-toggle-off mr-1"></i>লেজারের স্টক বসান'; }
+function sfItem(it, i) {
+    const r = bf.rows[it.name] || {};
+    const v = k => esc(r[k] === undefined ? '' : r[k]);
+    const on = !!r.auto;
+    return `<div class="rounded-xl border shadow-sm p-3 ${it.isMixed ? 'bg-purple-50/40 border-purple-200' : 'bg-white border-gray-200'}">
+        <div class="flex items-center justify-between gap-2">
+            <div><span class="font-bold text-gray-800 text-sm">${esc(it.name)}</span>${it.isMixed ? ' <span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">মিক্সড</span>' : ''}
+                <span class="text-[11px] text-gray-500 block">লেজারে আছে: <b class="text-amber-800">${fg(it.stock)}</b> • গড় ৳${fmt(it.avg)}/কেজি</span></div>
+            <div class="w-32 shrink-0"><label class="block text-[10px] text-gray-600 text-center">মেপে পাওয়া (g)</label>
+                <input id="sf-in-${i}" type="number" inputmode="decimal" step="any" value="${on ? esc(round(it.stock, 2)) : v('meas')}" oninput="sfRow(${i},'meas',this.value)" class="${INP} !p-1.5 !text-xs" placeholder="খালি = বাদ">
+                <button id="sf-auto-${i}" onclick="sfAuto(${i})" class="${autoCls(on)}">${autoLbl(on)}</button></div>
+        </div>
+        <div id="sf-res-${i}" class="text-[11px] mt-1.5"></div>
+        <div id="sf-ext-${i}" class="hidden mt-1.5 bg-blue-50/70 border border-blue-100 rounded-lg p-2">
+            <span class="text-[10px] text-blue-900 font-bold block mb-1">কম পাওয়া অংশের কিছু কি বিক্রি করেছিলেন? (ইচ্ছাধীন)</span>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" inputmode="decimal" step="any" value="${v('soldG')}" oninput="sfRow(${i},'soldG',this.value)" class="${INP} !p-1.5 !text-xs" placeholder="বিক্রি (g)">
+                <input type="number" inputmode="decimal" step="any" value="${v('soldTk')}" oninput="sfRow(${i},'soldTk',this.value)" class="${INP} !p-1.5 !text-xs text-blue-700" placeholder="বিক্রয় মূল্য (৳)">
+            </div>
+        </div>
+    </div>`;
+}
+function sfRow(i, field, val) {
+    if (field === 'meas') {
+        const it = state.items[i], r = bf.rows[it.name] || (bf.rows[it.name] = {});
+        if (r.auto) { r.auto = false; const b = el('sf-auto-' + i); if (b) { b.className = autoCls(false); b.innerHTML = autoLbl(false); } }
+    }
+    bfSet(i, state.items, field, val); sfPreview();
+}
+// টগল: লেজারের স্টককেই মাপা ওজন ধরে বসায় (ঘাটতি/বাড়তি শূন্য)
+function sfAuto(i) {
+    const it = state.items[i]; if (!it) return;
+    const r = bf.rows[it.name] || (bf.rows[it.name] = {});
+    if (r.auto) { r.auto = false; r.meas = ''; }
+    else {
+        if (it.stock <= EPS) { toast('এই আইটেমের স্টক নেই'); return; }
+        r.auto = true; r.meas = String(round(it.stock, 2)); r.soldG = ''; r.soldTk = '';
+    }
+    saveDraft(); setVal('sf-in-' + i, r.meas);
+    const b = el('sf-auto-' + i); if (b) { b.className = autoCls(!!r.auto); b.innerHTML = autoLbl(!!r.auto); }
+    sfPreview();
+}
+function sfAutoAll() {
+    const all = state.items.filter(it => it.stock > EPS);
+    const allOn = all.length > 0 && all.every(it => (bf.rows[it.name] || {}).auto);
+    all.forEach(it => {
+        const r = bf.rows[it.name] || (bf.rows[it.name] = {});
+        if (allOn) { r.auto = false; r.meas = ''; }
+        else { r.auto = true; r.meas = String(round(it.stock, 2)); r.soldG = ''; r.soldTk = ''; }
+    });
+    saveDraft(); render();
+}
+function sfCompute() {
+    const rows = [], errors = [];
+    let eatCost = 0, soldRev = 0, soldCost = 0;
+    state.items.forEach((it, i) => {
+        const r = bf.rows[it.name] || {};
+        if (r.meas === undefined || r.meas === '') return;
+        const meas = r.auto ? it.stock : num(r.meas), diff = it.stock - meas;
+        let short = 0, gain = 0, soldG = 0, soldTk = 0, eatG = 0;
+        if (diff > EPS) {
+            short = diff; soldG = num(r.soldG); soldTk = num(r.soldTk);
+            if (soldG > short + EPS) errors.push(`${it.name}: বিক্রি (${fg(soldG)}) কম পাওয়া অংশের (${fg(short)}) চেয়ে বেশি`);
+            eatG = Math.max(0, short - soldG);
+        } else if (diff < -EPS) gain = -diff;
+        const cEat = costNow(it, eatG), cSold = costNow(it, soldG);
+        eatCost += cEat; soldRev += soldTk; soldCost += cSold;
+        rows.push({ i, name: it.name, meas, short, gain, soldG, soldTk, eatG, cEat, cSold });
+    });
+    return { rows, errors, eatCost, soldRev, soldCost };
+}
+function sfPreview() {
+    if (!el('sf-summary')) return;
+    const c = sfCompute();
+    state.items.forEach((it, i) => {
+        const res = el('sf-res-' + i), ext = el('sf-ext-' + i);
+        if (!res) return;
+        const row = c.rows.find(r => r.i === i);
+        if (!row) { res.innerHTML = ''; ext.classList.add('hidden'); return; }
+        ext.classList.toggle('hidden', !(row.short > EPS));
+        if (row.short > EPS) res.innerHTML = `<span class="text-rose-600 font-semibold">কম: ${fg(row.short)}</span>${row.soldG > 0 ? ' • বিক্রি ' + fg(row.soldG) : ''} • <b class="text-rose-700">খাওয়া/ঘাটতি ${fg(row.eatG)} (${tk(row.cEat)})</b>`;
+        else if (row.gain > EPS) res.innerHTML = `<span class="text-amber-700">মাপা ওজন ${fg(row.gain)} বেশি, স্টক ঠিক করা হবে (লাভে প্রভাব নেই)</span>`;
+        else res.innerHTML = '<span class="text-emerald-700 font-semibold">ঠিক আছে ✓</span>';
+    });
+    setHtml('sf-summary', `
+        ${row2('মাপা আইটেম', c.rows.length + 'টি')}
+        ${row2('বিক্রির আয়', tk(c.soldRev), 'text-blue-300')}
+        ${row2('বিক্রির লাভ', tk(c.soldRev - c.soldCost), 'text-blue-300')}
+        <div class="flex justify-between text-sm font-extrabold border-t border-gray-700 pt-1.5 text-rose-300"><span>খাওয়া/ঘাটতি খরচ (লাভ থেকে কাটা যাবে)</span><span>${tk(c.eatCost)}</span></div>`);
+    setHtml('sf-errors', c.errors.map(e => '<i class="fa-solid fa-triangle-exclamation mr-1"></i>' + esc(e)).join('<br>'));
+}
+function sfClear() { if (!confirm('ফর্মের সব লেখা মুছবেন?')) return; bfReset(); render(); }
+function sfSave() { if (!canWrite()) return;
+    const c = sfCompute();
+    if (!c.rows.length) { alert('কমপক্ষে একটি আইটেমের মাপা ওজন লিখুন'); return; }
+    if (c.errors.length) { alert(c.errors.join('\n')); return; }
+    const big = c.rows.filter(r => { const it = state.map[r.name]; return r.short > EPS && it && it.stock > 0 && r.short / it.stock > 0.1; }).map(r => r.name);
+    if (!confirm(`ব্যাচ শুরু করবেন?\n${c.rows.length}টি আইটেম মাপা হয়েছে\nখাওয়া/ঘাটতি খরচ: ${tk(c.eatCost)}${big.length ? '\n\n⚠ বড় ঘাটতি (১০%+): ' + big.join(', ') + ', মাপ ঠিক আছে তো?' : ''}\n\nস্টক মাপা ওজন অনুযায়ী ঠিক হয়ে যাবে।`)) return;
+    const now = Date.now(), bid = uid('b_');
+    let k = 1;
+    const items = {}, mm = {}, pushS = t => { t.grp = 's'; db.txs.push(t); };   // grp 's' = ব্যাচ শুরুর ওজন-সংশোধন, পরে সম্পাদনায় লাগে
+    c.rows.forEach(r => {
+        items[r.name] = r.meas;
+        mm[r.name] = { before: round(r.meas + r.short - r.gain, 3), start: r.meas, soldG: r.soldG || 0, soldTk: r.soldTk || 0 };
+        if (r.soldG > 0) pushS(makeTx('BULK', r.name, r.soldG, 0, r.soldTk, bid, 'ব্যাচের আগে কম পাওয়া অংশ থেকে বিক্রি', now + (k++)));
+        if (r.eatG > EPS) pushS(makeTx('EAT', r.name, r.eatG, 0, r.cEat, bid, 'অটো ঘাটতি (ব্যাচের আগে ওজন মেপে)', now + (k++)));
+        if (r.gain > EPS) pushS(makeTx('ADJUST_IN', r.name, r.gain, 0, 0, bid, 'মাপা ওজন বেশি, স্টক সংশোধন', now + (k++)));
+    });
+    db.running = { id: bid, ts: now, date: dateStr(now), items, m: mm }; db.runningDirty = true;
+    const note = bf.note; bfReset(); bf.note = note; saveDraft();
+    refresh(); window.scrollTo(0, 0); toast('ব্যাচ শুরু হয়েছে, এবার প্যাকেট করুন');
+}
+
+// ===== ধাপ ২: প্যাকেট শেষে ওজন =====
+function runList() { return db.running ? state.items.filter(it => db.running.items[it.name] !== undefined) : []; }
+function viewBatchFinish() {
+    const run = db.running, list = runList();
+    return `
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-xs text-amber-900">
+        <b><i class="fa-solid fa-2 mr-1"></i>ধাপ ২ / ২: প্যাকেট শেষ, এবার আবার ওজন মাপুন</b>
+        <p class="mt-1 text-amber-800">ব্যাচ শুরু: ${esc(run.date)}। প্রতিটি আইটেমের এখনকার ওজন লিখুন। শুরুর স্টক − শেষের ওজন = প্যাকেটে খরচ।</p>
+        <div class="flex gap-3 mt-2 no-print">
+            <button onclick="runCancel(false)" class="text-[11px] font-semibold text-gray-700 underline">ব্যাচ বাতিল (ঘাটতিগুলো থাকবে)</button>
+            <button onclick="runCancel(true)" class="text-[11px] font-semibold text-red-600 underline">বাতিল ও শুরুর সব এন্ট্রি মুছুন</button>
+        </div>
+    </div>
+    <div class="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm mb-3">
+        <div class="grid grid-cols-3 gap-2">
+            <div><label class="block text-xs text-gray-600 font-medium mb-1">প্যাকেট সংখ্যা</label><input type="number" inputmode="decimal" value="${esc(bf.packets)}" oninput="ffTop('packets',this.value)" class="${INP}" placeholder="১০০"></div>
+            <div><label class="block text-xs text-gray-600 font-medium mb-1">প্যাকেজিং খরচ (৳)</label><input type="number" inputmode="decimal" value="${esc(bf.packaging)}" oninput="ffTop('packaging',this.value)" class="${INP}" placeholder="০"></div>
+            <div><label class="block text-xs text-gray-600 font-medium mb-1">বিক্রি মূল্য/প্যাকেট (৳)</label><input type="number" inputmode="decimal" value="${esc(bf.sell)}" oninput="ffTop('sell',this.value)" class="${INP}" placeholder="১৭"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+            <div><label class="block text-xs text-gray-600 font-medium mb-1">বিক্রি হয়েছে (প্যাকেট)</label><input type="number" inputmode="decimal" value="${esc(bf.sold)}" oninput="ffTop('sold',this.value)" class="${INP}" placeholder="খালি = সব বিক্রি"></div>
+            <div><label class="block text-xs text-gray-600 font-medium mb-1">অন্যান্য খরচ (৳)</label><input type="number" inputmode="decimal" value="${esc(bf.other)}" oninput="ffTop('other',this.value)" class="${INP}" placeholder="ডেলিভারি, বিজ্ঞাপন…"></div>
+        </div>
+        <input type="text" value="${esc(bf.note)}" oninput="ffTop('note',this.value)" class="${INP_L} mt-2 !text-xs" placeholder="নোট (ইচ্ছাধীন)">
+    </div>
+    <div class="space-y-2.5">${list.map(ffItem).join('') || '<p class="text-center text-gray-500 text-sm py-4">এই ব্যাচে কোনো আইটেম নেই</p>'}</div>
+    <div class="bg-gray-800 text-white p-4 rounded-xl shadow-lg mt-4 mb-3">
+        <h3 class="text-sm font-bold text-amber-400 mb-2 border-b border-gray-700 pb-1">এই ব্যাচের হিসাব (সেভের আগে প্রিভিউ)</h3>
+        <div class="text-xs space-y-1.5 text-gray-300" id="ff-summary"></div>
+    </div>
+    <div id="ff-errors" class="text-xs text-red-600 mb-2"></div>
+    <div class="mb-4 no-print">
+        <button onclick="ffSave()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow"><i class="fa-solid fa-flag-checkered mr-1.5"></i>ব্যাচ শেষ করুন ও সেভ করুন</button>
+    </div>`;
+}
+function ffItem(it, i) {
+    const r = bf.rows[it.name] || {};
+    const startMeas = db.running.items[it.name];
+    return `<div class="rounded-xl border shadow-sm p-3 ${it.isMixed ? 'bg-purple-50/40 border-purple-200' : 'bg-white border-gray-200'}">
+        <div class="flex items-center justify-between gap-2">
+            <div><span class="font-bold text-gray-800 text-sm">${esc(it.name)}</span>${it.isMixed ? ' <span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">মিক্সড</span>' : ''}
+                <span class="text-[11px] text-gray-500 block">শুরুতে মাপা: <b>${fg(startMeas)}</b> • এখন লেজারে: <b class="text-amber-800">${fg(it.stock)}</b> • গড় ৳${fmt(it.avg)}</span></div>
+            <div class="w-28 shrink-0"><label class="block text-[10px] text-gray-600 text-center">শেষের ওজন (g)</label>
+                <input type="number" inputmode="decimal" step="any" value="${esc(r.end === undefined ? '' : r.end)}" oninput="ffRow(${i},this.value)" class="${INP} !p-1.5 !text-xs text-amber-900" placeholder="খালি = ব্যবহার হয়নি"></div>
+        </div>
+        <div id="ff-res-${i}" class="text-[11px] mt-1.5"></div>
+    </div>`;
+}
+function ffTop(k, v) { bf[k] = v; saveDraft(); ffPreview(); }
+function ffRow(i, val) { bfSet(i, runList(), 'end', val); ffPreview(); }
+function ffCompute() {
+    const run = db.running, list = runList();
+    const P = num(bf.packets), pkg = num(bf.packaging), sell = num(bf.sell), other = num(bf.other);
+    const sold = (bf.sold === undefined || bf.sold === '') ? P : num(bf.sold);
+    const rows = [], errors = [], skipped = [];
+    let pktCost = 0, replCost = 0;
+    list.forEach((it, i) => {
+        const r = bf.rows[it.name] || {};
+        if (r.end === undefined || r.end === '') { skipped.push(i); return; }
+        const end = num(r.end), used = it.stock - end;
+        if (used < -EPS) { errors.push(`${it.name}: শেষের ওজন (${fg(end)}) এখনকার স্টক ${fg(it.stock)} এর চেয়ে বেশি হতে পারে না`); return; }
+        const u = Math.max(0, used), c = costNow(it, u);
+        pktCost += c; replCost += u / 1000 * it.repl;
+        rows.push({ i, name: it.name, end, used: u, cost: c });
+    });
+    if (sold > P + EPS) errors.push(`বিক্রি (${fmt(sold, 0)}) প্যাকেট সংখ্যার (${fmt(P, 0)}) চেয়ে বেশি হতে পারে না`);
+    const a = (run && state.byRef[run.id]) || emptyAgg();
+    const totalPacketCost = pktCost + pkg;
+    const cpp = totalPacketCost / (P > 0 ? P : 1);
+    const revenue = sold * sell, packetProfit = revenue - totalPacketCost;
+    const bulkProfit = a.bulkRev - a.bulkCost, eat = a.eatCost, exp = a.exp + other;
+    const net = packetProfit + bulkProfit - eat - exp;
+    const margin = cpp > 0 ? (sell - cpp) / cpp * 100 : 0;
+    const replNet = net + (pktCost - replCost);
+    return { P, sold, pkg, sell, other, exp, rows, errors, skipped, pktCost, replCost, replNet, totalPacketCost, cpp, revenue, packetProfit, bulkProfit, eat, net, margin, bulkRev: a.bulkRev, bulkCost: a.bulkCost };
+}
+function ffPreview() {
+    if (!el('ff-summary')) return;
+    const c = ffCompute(), list = runList();
+    list.forEach((it, i) => {
+        const res = el('ff-res-' + i); if (!res) return;
+        const row = c.rows.find(r => r.i === i);
+        res.innerHTML = row ? `প্যাকেটে খরচ: <b class="text-blue-700">${fg(row.used)}</b> • খরচ <b class="text-emerald-700">${tk(row.cost)}</b>` : '';
+    });
+    setHtml('ff-summary', `
+        ${row2('প্যাকেটে কাঁচামাল খরচ', tk(c.pktCost))}
+        ${row2('প্যাকেজিং খরচ', tk(c.pkg))}
+        ${row2('মোট প্যাকেট খরচ', tk(c.totalPacketCost))}
+        <div class="flex justify-between text-amber-300 font-bold"><span>প্যাকেট প্রতি গড় খরচ</span><span>${tk(c.cpp)}</span></div>
+        ${row2('প্যাকেট বিক্রির আয় (' + fmt(c.sold, 0) + ' × ' + fmt(c.sell) + ')', tk(c.revenue), 'text-emerald-300')}
+        ${row2('ছোট প্যাকেট বিক্রির লাভ', tk(c.packetProfit), 'text-emerald-300')}
+        ${row2('শুরুর ধাপের বিক্রির লাভ', tk(c.bulkProfit), 'text-blue-300')}
+        ${row2('শুরুর ধাপের খাওয়া/ঘাটতি (বিয়োগ)', '- ' + tk(c.eat), 'text-rose-300')}
+        ${row2('অন্যান্য খরচ (বিয়োগ)', '- ' + tk(c.exp), 'text-rose-300')}
+        <div class="flex justify-between text-sm font-extrabold border-t border-gray-700 pt-1.5 ${c.net >= 0 ? 'text-emerald-400' : 'text-red-400'}"><span>ব্যাচ নিট লাভ (${fmt(c.margin)}% মার্জিন)</span><span>${tk(c.net)}</span></div>
+        ${c.sold < c.P - EPS ? `<div class="text-amber-300 text-[11px]">অবিক্রীত ${fmt(c.P - c.sold, 0)} প্যাকেট। বিক্রি হলে লেজার → ব্যাচ → সম্পাদনা থেকে সংখ্যা বাড়ান।</div>` : ''}
+        <div class="text-[11px] text-sky-300 border-t border-gray-700 pt-1.5">সর্বশেষ কেনা দরে কাঁচামাল ধরলে নিট লাভ হতো: <b>${tk(c.replNet)}</b></div>`);
+    setHtml('ff-errors', c.errors.map(e => '<i class="fa-solid fa-triangle-exclamation mr-1"></i>' + esc(e)).join('<br>'));
+}
+function ffSave() { if (!canWrite()) return;
+    const run = db.running; if (!run) return;
+    const c = ffCompute();
+    if (c.P <= 0) { alert('প্যাকেট সংখ্যা লিখুন'); return; }
+    if (c.errors.length) { alert(c.errors.join('\n')); return; }
+    if (!c.rows.length) { alert('কমপক্ষে একটি আইটেমের শেষের ওজন লিখুন'); return; }
+    if (!c.rows.some(r => r.used > EPS)) { alert('কোনো আইটেমই কমেনি, শেষের ওজন আবার দেখুন'); return; }
+    if (!confirm(`ব্যাচ শেষ করে সেভ করবেন?\n${fmt(c.P, 0)} প্যাকেট • প্যাকেট প্রতি খরচ ${tk(c.cpp)}\nনিট লাভ ${tk(c.net)}\n\nস্টক শেষের ওজন অনুযায়ী কমবে।`)) return;
+    const now = Date.now();
+    let finMeas;   // প্রতি আইটেমের শুরুর ও শেষের মাপা ওজন (পরে ভুল হলে ঠিক করার জন্য)
+    if (run.m) {
+        finMeas = {};
+        Object.keys(run.m).forEach(n => { finMeas[n] = Object.assign({}, run.m[n], { end: null }); });
+        c.rows.forEach(r => { if (finMeas[r.name]) finMeas[r.name].end = r.end; });
+    }
+    db.batches.push({ id: run.id, ts: run.ts, date: run.date, packets: c.P, soldPackets: c.sold, packagingCost: c.pkg, sellingPrice: c.sell, note: bf.note || '', sp: Object.assign({}, db.prices || {}), meas: finMeas, synced: false,
+        snap: { packetCost: round(c.totalPacketCost, 2), bulkRevenue: round(c.bulkRev, 2), bulkCost: round(c.bulkCost, 2), eatCost: round(c.eat, 2), otherCost: round(c.exp, 2), netProfit: round(c.net, 2), margin: round(c.margin, 2) } });
+    let k = 1;
+    c.rows.forEach(r => { if (r.used > EPS) { const pt = makeTx('PACKET', r.name, r.used, 0, r.cost, run.id, '', now + (k++)); pt.grp = 'p'; db.txs.push(pt); } });
+    if (c.other > 0) db.txs.push(makeTx('EXPENSE', 'অন্যান্য খরচ', 0, 0, c.other, run.id, 'ব্যাচের অন্যান্য খরচ', now + (k++)));
+    db.running = null; db.runningDirty = true; bfReset();
+    ui.tab = 'home'; refresh(); window.scrollTo(0, 0); toast('ব্যাচ সেভ হয়েছে');
+}
+function runCancel(all) { if (!canWrite()) return;
+    const run = db.running; if (!run) return;
+    if (all) { deleteGroup(run.id); return; }
+    if (!confirm('ব্যাচ বাতিল করবেন? শুরুতে ধরা ঘাটতি ও স্টক সংশোধন লেজারে থেকে যাবে।')) return;
+    db.running = null; db.runningDirty = true; bfReset(); refresh(); toast('ব্যাচ বাতিল হয়েছে');
+}
+
+// ---------- লেজার ----------
+function viewLedger() {
+    if (!db.txs.length) return viewOnboarding();
+    const tabs = `<div class="flex gap-1.5 mb-3 text-xs font-semibold">
+        <button onclick="ui.ledgerTab='batches';render()" class="flex-1 py-2 rounded-lg border ${ui.ledgerTab === 'batches' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">ব্যাচ (${state.batches.length})</button>
+        <button onclick="ui.ledgerTab='items';render()" class="flex-1 py-2 rounded-lg border ${ui.ledgerTab === 'items' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">আইটেম লাভ</button>
+        <button onclick="ui.ledgerTab='txs';render()" class="flex-1 py-2 rounded-lg border ${ui.ledgerTab === 'txs' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">সব লেনদেন (${db.txs.length})</button></div>`;
+    return tabs + (ui.ledgerTab === 'batches' ? viewBatchList() : ui.ledgerTab === 'items' ? viewItemProfit() : viewTxList());
+}
+function reconBox() {
+    const T = state.totals, sum = state.batches.reduce((s, b) => s + b.net, 0), other = T.profit - sum;
+    return `<div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5 mb-3 text-xs space-y-1">
+        <div class="flex justify-between"><span class="font-bold text-indigo-900">ব্যাচগুলোর মোট নিট লাভ</span><b class="${profitCls(sum)}">${tk(sum)}</b></div>
+        <div class="flex justify-between"><span class="text-indigo-900">ব্যাচের বাইরের লাভ/ক্ষতি (বাল্ক − খাওয়া − খরচ)</span><b class="${profitCls(other)}">${tk(other)}</b></div>
+        <div class="flex justify-between border-t border-indigo-200 pt-1"><span class="font-bold text-indigo-900">লাইফটাইম নিট লাভ (হোমের সমান)</span><b class="${profitCls(T.profit)}">${tk(T.profit)}</b></div></div>`;
+}
+function viewBatchList() {
+    if (!state.batches.length) return '<p class="text-center text-gray-500 text-sm py-6">এখনো কোনো ব্যাচ সেভ হয়নি।</p>' + reconBox();
+    return reconBox() + `<div class="space-y-2.5 mb-4">${state.batches.slice().reverse().map((b, n) => {
+        const open = !!ui.openBatch[b.id];
+        const txs = db.txs.filter(t => t.ref === b.id && t.type !== 'ADJUST_IN' && t.type !== 'EXPENSE');
+        const names = [...new Set(txs.map(t => t.item))];
+        return `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div onclick="ui.openBatch['${b.id}']=!ui.openBatch['${b.id}'];render()" class="p-2.5 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
+                <div><span class="text-[11px] font-bold text-gray-600 block">ব্যাচ #${state.batches.length - n} • ${esc(b.date)}</span>
+                    <span class="text-xs text-gray-700">${fmt(b.packets, 0)} প্যাকেট${b.soldPackets < b.packets ? ' (বিক্রি ' + fmt(b.soldPackets, 0) + ')' : ''} • খরচ/প্যাকেট ${tk(b.costPerPacket)}</span></div>
+                <div class="text-right"><span class="font-extrabold ${profitCls(b.net)} block">${tk(b.net)}</span><i class="fa-solid fa-chevron-down text-gray-400 text-xs ${open ? 'rotate-180' : ''}"></i></div>
+            </div>
+            ${open ? `<div class="p-2.5 border-t bg-white text-[11px] space-y-2">
+                <div class="grid grid-cols-2 gap-1.5 bg-emerald-50/60 p-2 rounded-lg border border-emerald-100">
+                    <div>বিক্রি মূল্য: <b>${tk(b.sellingPrice)}</b></div><div>মার্জিন: <b class="text-purple-700">${fmt(b.margin)}%</b></div>
+                    <div>বিক্রি হয়েছে: <b>${fmt(b.soldPackets, 0)} / ${fmt(b.packets, 0)}</b></div><div>প্যাকেট আয়: <b>${tk(b.packetRevenue)}</b></div>
+                    <div>প্যাকেজিং: <b>${tk(b.packagingCost)}</b></div><div>অন্যান্য খরচ: <b class="text-rose-600">- ${tk(b.otherCost)}</b></div>
+                    <div>প্যাকেট লাভ: <b class="${profitCls(b.packetProfit)}">${tk(b.packetProfit)}</b></div><div>বাল্ক লাভ: <b class="${profitCls(b.bulkProfit)}">${tk(b.bulkProfit)}</b></div>
+                    <div>খাওয়া/ঘাটতি: <b class="text-rose-600">- ${tk(b.eatCost)}</b></div><div>নিট লাভ: <b class="${profitCls(b.net)}">${tk(b.net)}</b></div>
+                </div>
+                ${b.note ? `<div class="text-gray-500">নোট: ${esc(b.note)}</div>` : ''}
+                ${allocToggle()}${batchItemTable(b)}
+                <div>${names.map(n => {
+                    const p = txs.filter(t => t.item === n && t.type === 'PACKET'), bk = txs.filter(t => t.item === n && t.type === 'BULK'), e = txs.filter(t => t.item === n && t.type === 'EAT');
+                    const sum = (a, f) => a.reduce((s, t) => s + f(t), 0);
+                    return `<div class="border-b border-dashed border-gray-100 py-1"><div class="font-semibold text-gray-800">• ${esc(n)}</div>
+                        <div class="text-[10px] text-gray-500 pl-2">${p.length ? `প্যাকেটে ${fg(sum(p, t => t.grams))} (${tk(sum(p, t => state.costOf[t.id]))}) | ` : ''}${bk.length ? `বাল্ক ${fg(sum(bk, t => t.grams))} (আয় ${tk(sum(bk, t => t.amountTk))}) | ` : ''}${e.length ? `<span class="text-rose-600">ঘাটতি ${fg(sum(e, t => t.grams))} (${tk(sum(e, t => state.costOf[t.id]))})</span>` : ''}</div></div>`;
+                }).join('')}</div>
+                ${batchIngredients(b)}
+                <div class="flex gap-4 no-print">
+                    <button onclick="openPlan('${b.id}')" class="text-purple-700 text-[11px] font-semibold"><i class="fa-solid fa-calculator mr-1"></i>এই রেসিপিতে কতটি বানানো যাবে</button>
+                    <button onclick="openBatchEdit('${b.id}')" class="text-indigo-600 text-[11px] font-semibold"><i class="fa-solid fa-pen mr-1"></i>সম্পাদনা (বিক্রি/দাম/প্যাকেজিং)</button>
+                    <button onclick="deleteGroup('${b.id}')" class="text-red-600 text-[11px] font-semibold"><i class="fa-solid fa-trash-can mr-1"></i>মুছুন (স্টক ফেরত আসবে)</button>
+                </div>
+            </div>` : ''}
+        </div>`;
+    }).join('')}</div>`;
+}
+
+// ---------- আইটেমভিত্তিক লাভ ----------
+function allocToggle() {
+    const b = (v, t) => `<button onclick="ui.alloc='${v}';try{localStorage.setItem('sbx_alloc','${v}')}catch(e){};render()" class="flex-1 py-1.5 rounded-lg border ${ui.alloc === v ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600'}">${t}</button>`;
+    const how = ui.alloc === 'weight' ? 'ওজনের' : ui.alloc === 'price' ? 'প্রতি কেজি বিক্রয় মূল্যের (গ্রাম × দাম)' : 'খরচের';
+    const missing = ui.alloc === 'price' ? state.items.filter(i => (i.pktG > 0) && !(db.prices && db.prices[i.name] > 0)).map(i => i.name) : [];
+    return `<div class="mb-2"><div class="flex gap-1.5 text-[11px] font-semibold">${b('cost', 'খরচের অনুপাতে')}${b('weight', 'ওজনের অনুপাতে')}${b('price', 'বিক্রয় মূল্যের অনুপাতে')}</div>
+        <p class="text-[10px] text-gray-500 mt-1">প্যাকেট এক দামে বিক্রি হয়, আইটেম আলাদা নয়। তাই বিক্রয় মূল্য ও প্যাকেজিং খরচ আইটেমগুলোর মধ্যে ${how} অনুপাতে ভাগ করা আনুমানিক হিসাব। মোট লাভ বদলায় না, শুধু ভাগ বদলায়।</p>
+        ${ui.alloc === 'price' ? `<p class="text-[10px] text-purple-700 mt-0.5">আইটেমের "বিক্রয় মূল্য/কেজি" স্টক ট্যাবে আইটেম খুলে দিন। ব্যাচ বানানোর সময়ের দামই ওই ব্যাচে ধরা থাকে।</p>` : ''}
+        ${missing.length ? `<p class="text-[10px] text-amber-700 mt-0.5">দাম দেওয়া নেই: ${esc(missing.join(', '))} (এদের জন্য গড় কেনা দর ধরা হচ্ছে)</p>` : ''}</div>`;
+}
+function setSellPrice(name, v) {
+    if (!canWrite()) return;
+    db.prices = db.prices || {};
+    const n = num(v);
+    if (n > 0) db.prices[name] = round(n, 2); else delete db.prices[name];
+    db.pricesDirty = true; refresh(); toast('বিক্রয় মূল্য সেভ হয়েছে');
+}
+function batchItemTable(b) {
+    const d = itemProfit(db.txs, state, ui.alloc, db.prices, db.batches).per[b.id];
+    if (!d || !d.rows.length) return '';
+    const sum = f => d.rows.reduce((s, r) => s + f(r), 0), cls = 'p-1.5 text-right';
+    const rows = d.rows.map(r => `<tr class="border-t"><td class="p-1.5 font-bold text-gray-800 text-left">${esc(r.item)}</td>
+        <td class="${cls}">${fmt(r.gPer, 1)}</td><td class="${cls} text-gray-500">${fmt(r.priceKg)}</td><td class="${cls}">${fmt(r.cPer)}</td>
+        <td class="${cls}">${fmt(r.revPer)}</td><td class="${cls} font-bold ${profitCls(r.profitPer)}">${fmt(r.profitPer)}</td><td class="${cls} font-bold ${profitCls(r.profit)}">${fmt(r.profit)}</td></tr>`).join('');
+    const pPer = d.sell - sum(r => r.cPer) - d.pkg / d.P;
+    return `<div class="border border-purple-100 rounded-lg overflow-hidden"><div class="bg-purple-50 px-2 py-1 font-bold text-purple-900">প্রতি প্যাকেটে আইটেমভিত্তিক হিসাব (${fmt(d.P, 0)} প্যাকেট)</div>
+        <div class="overflow-x-auto"><table class="w-full text-[10px] whitespace-nowrap"><thead class="bg-gray-100 text-gray-600"><tr>
+            <th class="p-1.5 text-left">আইটেম</th><th class="p-1.5 text-right">গ্রাম/প্যাকেট</th><th class="p-1.5 text-right">কেনা দর ৳/কেজি</th><th class="p-1.5 text-right">খরচ ৳/প্যাকেট</th><th class="p-1.5 text-right">আয় ৳/প্যাকেট</th><th class="p-1.5 text-right">লাভ ৳/প্যাকেট</th><th class="p-1.5 text-right">ব্যাচে মোট লাভ ৳</th></tr></thead>
+            <tbody>${rows}<tr class="border-t-2 bg-gray-50 font-extrabold"><td class="p-1.5 text-left">মোট</td><td class="${cls}">${fmt(sum(r => r.gPer), 1)}</td><td class="${cls}"></td><td class="${cls}">${fmt(sum(r => r.cPer))}</td><td class="${cls}">${fmt(d.sell)}</td><td class="${cls} ${profitCls(pPer)}">${fmt(pPer)}</td><td class="${cls} ${profitCls(sum(r => r.profit))}">${fmt(sum(r => r.profit))}</td></tr></tbody></table></div>
+        <p class="text-[10px] text-gray-500 px-2 py-1">প্যাকেজিং ${tk(d.pkg)} (প্রতি প্যাকেটে ${tk(d.pkg / d.P)}) আইটেমগুলোর মধ্যে ভাগ করা আছে।${d.S < d.P ? ' "লাভ ৳/প্যাকেট" বিক্রি হওয়া প্যাকেটের হিসাবে; "ব্যাচে মোট লাভ"-এ অবিক্রীত ' + fmt(d.P - d.S, 0) + ' প্যাকেটের খরচও ধরা আছে।' : ''} বাল্ক, খাওয়া ও অন্যান্য খরচ এই টেবিলে নেই।</p></div>`;
+}
+function toggleItemOpen(n) { ui.itemOpen[n] = !ui.itemOpen[n]; render(); }
+function viewItemProfit() {
+    if (!state.batches.length && !db.txs.some(t => t.type === 'BULK')) return '<p class="text-center text-gray-500 text-sm py-6">এখনো ব্যাচ বা বিক্রি নেই।</p>';
+    const ip = itemProfit(db.txs, state, ui.alloc, db.prices, db.batches), cls = 'p-1.5 text-right', T = state.totals;
+    const rows = ip.items.map(x => {
+        const open = !!ui.itemOpen[x.name], det = (ip.itemBatches[x.name] || []);
+        return `<tr class="border-t active:bg-sky-50" onclick="toggleItemOpen(decodeURIComponent('${encodeURIComponent(x.name)}'))">
+            <td class="p-1.5 font-bold text-gray-800 text-left"><i class="fa-solid fa-chevron-${open ? 'down' : 'right'} text-[9px] text-gray-400 mr-1"></i>${esc(x.name)}</td>
+            <td class="${cls} ${profitCls(x.pkt)}">${fmt(x.pkt)}</td><td class="${cls} ${profitCls(x.bulk)}">${fmt(x.bulk)}</td><td class="${cls} text-rose-600">${x.eat ? '-' + fmt(x.eat) : '0.00'}</td>
+            <td class="${cls} font-extrabold ${profitCls(x.net)}">${fmt(x.net)}</td></tr>
+            ${open ? `<tr><td colspan="5" class="bg-gray-50 p-0"><div class="p-2 space-y-1">${det.length ? det.map(d => `<div class="flex justify-between text-[10px]"><span class="text-gray-600">${esc(String(d.date).slice(0, 10))} • ${fg(d.g)} • খরচ ${fmt(d.c)}</span><b class="${profitCls(d.profit)}">লাভ ${fmt(d.profit)}</b></div>`).join('') : '<div class="text-[10px] text-gray-500">কোনো ব্যাচে ব্যবহার হয়নি</div>'}${x.loose > 0.005 ? `<div class="text-[10px] text-rose-600">ব্যাচ ছাড়া প্যাকেটে গেছে: -${fmt(x.loose)}</div>` : ''}</div></td></tr>` : ''}`;
+    }).join('');
+    const diff = ip.finalNet - T.profit, ok = Math.abs(diff) < 0.01;
+    return allocToggle() + `<div class="overflow-x-auto bg-white border border-gray-200 rounded-lg mb-3"><table class="w-full text-[11px] whitespace-nowrap">
+        <thead class="bg-gray-100 text-gray-600"><tr><th class="p-1.5 text-left">আইটেম</th><th class="p-1.5 text-right">প্যাকেটে লাভ</th><th class="p-1.5 text-right">বাল্কে লাভ</th><th class="p-1.5 text-right">খাওয়া/ঘাটতি</th><th class="p-1.5 text-right">নিট লাভ ৳</th></tr></thead>
+        <tbody>${rows}
+            <tr class="border-t-2 bg-gray-50 font-bold"><td class="p-1.5 text-left">আইটেমগুলোর যোগফল</td><td class="${cls}" colspan="3"></td><td class="${cls} ${profitCls(ip.sumItems)}">${fmt(ip.sumItems)}</td></tr>
+            ${Math.abs(ip.unalloc) > 0.005 ? `<tr class="border-t"><td class="p-1.5 text-left text-gray-600">আইটেম ছাড়া ব্যাচের আয়-খরচ</td><td colspan="3"></td><td class="${cls} ${profitCls(ip.unalloc)}">${fmt(ip.unalloc)}</td></tr>` : ''}
+            <tr class="border-t"><td class="p-1.5 text-left text-gray-600">অন্যান্য খরচ (ডেলিভারি, বিজ্ঞাপন ইত্যাদি)</td><td colspan="3"></td><td class="${cls} text-rose-600">-${fmt(ip.expense)}</td></tr>
+            <tr class="border-t-2 bg-emerald-50 font-extrabold"><td class="p-1.5 text-left text-emerald-900">মোট নিট লাভ</td><td colspan="3"></td><td class="${cls} ${profitCls(ip.finalNet)}">${fmt(ip.finalNet)}</td></tr></tbody></table></div>
+        <p class="text-[11px] ${ok ? 'text-emerald-700' : 'text-red-600'} mb-2">${ok ? '✓ হোমের লাইফটাইম নিট লাভের সাথে মিলেছে' : 'হোমের নিট লাভের সাথে ' + tk(diff) + ' তফাত আছে'}</p>
+        <p class="text-[10px] text-gray-500 mb-4">সারিতে চাপলে কোন ব্যাচ থেকে কত লাভ এসেছে দেখা যায়। ব্লেন্ডের উপাদানের খরচ ব্লেন্ড আইটেমে চলে যায়, তাই ব্লেন্ডের লাভ ব্লেন্ড আইটেমেই ধরা হয়।</p>`;
+}
+function txVal(t) {
+    const cost = state.costOf[t.id] || 0;
+    if (t.type === 'OPENING' || t.type === 'RESTOCK') return t.grams / 1000 * t.pricePerKg;
+    if (t.type === 'BULK' || t.type === 'EXPENSE') return t.amountTk;
+    return cost;
+}
+function viewTxList() {
+    let list = db.txs.slice().sort((a, b) => b.ts - a.ts || (a.id < b.id ? 1 : -1));
+    if (ui.txItem) list = list.filter(t => t.item === ui.txItem);
+    if (ui.txType) list = list.filter(t => t.type === ui.txType);
+    const q = (ui.txQ || '').trim().toLowerCase();
+    if (q) list = list.filter(t => [t.item, t.note, t.date, TYPE_LABEL[t.type] || t.type].join(' ').toLowerCase().includes(q));
+    const shown = list.slice(0, ui.txLimit);
+    const tabBtn = (v, txt) => `<button onclick="ui.txView='${v}';render()" class="flex-1 py-1.5 rounded-lg border ${ui.txView === v ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600'}">${txt}</button>`;
+    const toolbar = `<div class="grid grid-cols-2 gap-2 mb-2 text-xs">
+        <select onchange="ui.txItem=this.value;ui.txLimit=60;render()" class="border rounded-lg p-1.5 bg-white"><option value="">সব আইটেম</option>${state.items.map(i => `<option ${ui.txItem === i.name ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select>
+        <select onchange="ui.txType=this.value;ui.txLimit=60;render()" class="border rounded-lg p-1.5 bg-white"><option value="">সব ধরন</option>${Object.keys(TYPE_LABEL).map(k => `<option value="${k}" ${ui.txType === k ? 'selected' : ''}>${TYPE_LABEL[k]}</option>`).join('')}</select>
+        <input value="${esc(ui.txQ || '')}" onchange="ui.txQ=this.value;ui.txLimit=60;render()" placeholder="খুঁজুন: আইটেম, নোট, তারিখ" class="col-span-2 border rounded-lg p-1.5 bg-white">
+        <div class="col-span-2 flex gap-2">${tabBtn('table', '<i class="fa-solid fa-table mr-1"></i>টেবিল')}${tabBtn('cards', '<i class="fa-solid fa-list mr-1"></i>কার্ড')}</div>
+    </div>
+    <p class="text-[11px] text-gray-500 mb-1.5">${list.length}টি এন্ট্রি • বদলাতে সারিতে চাপুন</p>`;
+    const more = list.length > shown.length ? `<button onclick="ui.txLimit+=60;render()" class="w-full bg-white border rounded-lg py-2 text-xs font-semibold mb-4">আরও দেখান (${list.length - shown.length})</button>` : '';
+    if (ui.txView === 'cards') {
+        return toolbar + `<div class="space-y-1.5 mb-3">${shown.map(t => {
+            const cost = state.costOf[t.id] || 0;
+            let right = '';
+            if (t.type === 'OPENING' || t.type === 'RESTOCK') right = `${tk(t.grams / 1000 * t.pricePerKg)}<span class="block text-[10px] text-gray-400">@ ৳${fmt(t.pricePerKg)}/কেজি</span>`;
+            else if (t.type === 'BULK') right = `আয় ${tk(t.amountTk)}<span class="block text-[10px] text-gray-400">খরচ ${tk(cost)}</span>`;
+            else right = `${tk(cost)}`;
+            return `<div class="bg-white border border-gray-200 rounded-lg p-2 flex justify-between items-center text-xs">
+            <div onclick="txEdit('${t.id}')"><span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${TYPE_COLOR[t.type] || 'bg-gray-100'}">${TYPE_LABEL[t.type] || t.type}</span> <b class="text-gray-800">${esc(t.item)}</b>
+                <span class="block text-[10px] text-gray-500 mt-0.5">${esc(t.date)}${t.type === 'EXPENSE' ? '' : ' • ' + fg(t.grams)}${t.note ? ' • ' + esc(t.note) : ''}${t.ref ? ' • ' + (t.ref.indexOf('b_') === 0 ? 'ব্যাচ' : 'ব্লেন্ড') : ''}</span></div>
+            <div class="text-right font-bold text-gray-700 flex items-center gap-2"><span>${right}</span><button onclick="txEdit('${t.id}')" class="text-sky-500 hover:text-sky-700 no-print"><i class="fa-solid fa-pen"></i></button><button onclick="deleteTx('${t.id}')" class="text-red-400 hover:text-red-600 no-print"><i class="fa-solid fa-trash-can"></i></button></div>
+        </div>`;
+        }).join('') || '<p class="text-center text-gray-500 py-6 text-sm">কিছু পাওয়া যায়নি</p>'}</div>` + more;
+    }
+    // শিটের মতো টেবিল
+    const rows = shown.map((t, k) => `<tr class="border-t ${k % 2 ? 'bg-gray-50' : 'bg-white'} active:bg-sky-50" onclick="txEdit('${t.id}')">
+        <td class="p-1.5 text-gray-600">${esc(String(t.date).slice(0, 10))}</td>
+        <td class="p-1.5"><span class="text-[10px] px-1 py-0.5 rounded font-bold ${TYPE_COLOR[t.type] || 'bg-gray-100'}">${TYPE_LABEL[t.type] || t.type}</span></td>
+        <td class="p-1.5 font-bold text-gray-800">${esc(t.item)}${t.note ? `<span class="block text-[10px] font-normal text-gray-400 max-w-[130px] truncate">${esc(t.note)}</span>` : ''}</td>
+        <td class="p-1.5 text-right">${t.type === 'EXPENSE' ? '' : fmt(t.grams, 1)}</td>
+        <td class="p-1.5 text-right font-bold ${t.type === 'BULK' ? 'text-blue-700' : 'text-gray-700'}">${fmt(txVal(t))}</td>
+        <td class="p-1.5 whitespace-nowrap no-print"><button onclick="event.stopPropagation();txEdit('${t.id}')" class="text-sky-500 px-1"><i class="fa-solid fa-pen"></i></button><button onclick="event.stopPropagation();deleteTx('${t.id}')" class="text-red-400 px-1"><i class="fa-solid fa-trash-can"></i></button></td></tr>`).join('');
+    return toolbar + (shown.length ? `<div class="overflow-x-auto bg-white border border-gray-200 rounded-lg mb-3"><table class="w-full text-[11px] whitespace-nowrap">
+        <thead class="bg-gray-100 text-gray-600"><tr><th class="p-1.5 text-left">তারিখ</th><th class="p-1.5 text-left">ধরন</th><th class="p-1.5 text-left">আইটেম</th><th class="p-1.5 text-right">গ্রাম</th><th class="p-1.5 text-right">৳</th><th class="p-1.5"></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>` : '<p class="text-center text-gray-500 py-6 text-sm">কিছু পাওয়া যায়নি</p>') + more;
+}
+
+// ---------- এন্ট্রি এডিট (শিটের মতো সংশোধন) ----------
+const TX_EDIT_FIELDS = { OPENING: ['date', 'grams', 'price', 'note'], RESTOCK: ['date', 'item', 'grams', 'price', 'note'], BULK: ['date', 'item', 'grams', 'total', 'note'], EAT: ['date', 'item', 'grams', 'note'], EXPENSE: ['total', 'cat', 'note'], PACKET: ['grams', 'note'] };
+function txEdit(id) {
+    const t = db.txs.find(x => x.id === id); if (!t) return;
+    if (measGuard(t)) return;
+    if (!canWrite()) return;
+    const F = TX_EDIT_FIELDS[t.type] || ['note'], has = k => F.includes(k);
+    const lab = x => `<label class="block font-bold text-gray-700 mb-1">${x}</label>`;
+    const cats = EXP_CATS.includes(t.item) ? EXP_CATS : EXP_CATS.concat([t.item]);
+    const locked = !has('date') || !has('grams') || !has('item');
+    openModal(`<i class="fa-solid fa-pen text-sky-600 mr-1.5"></i>এন্ট্রি সংশোধন <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${TYPE_COLOR[t.type] || 'bg-gray-100'}">${TYPE_LABEL[t.type] || t.type}</span>`, `
+        ${has('date') ? `<div>${lab('তারিখ')}<input id="te-date" type="date" value="${dayKey(t.ts)}" class="${INP_L}"></div>` : `<div class="text-gray-500">তারিখ: ${esc(t.date)}</div>`}
+        ${has('item') ? `<div>${lab('আইটেম')}<select id="te-item" class="${INP_L}">${state.items.map(i => `<option ${i.name === t.item ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select></div>`
+            : has('cat') ? `<div>${lab('ধরন')}<select id="te-cat" class="${INP_L}">${cats.map(c => `<option ${c === t.item ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`
+            : `<div class="text-gray-500">আইটেম: <b class="text-gray-800">${esc(t.item)}</b></div>`}
+        ${has('grams') ? `<div>${lab('পরিমাণ (গ্রাম)')}<input id="te-g" type="number" inputmode="decimal" value="${t.grams}" class="${INP}"></div>` : ''}
+        ${has('price') ? `<div>${lab('কেজি দর (৳)')}<input id="te-p" type="number" inputmode="decimal" value="${t.pricePerKg}" class="${INP}"></div>` : ''}
+        ${has('total') ? `<div>${lab(t.type === 'BULK' ? 'মোট বিক্রয় মূল্য (৳)' : 'টাকা (৳)')}<input id="te-t" type="number" inputmode="decimal" value="${t.amountTk}" class="${INP}"></div>` : ''}
+        <div>${lab('নোট')}<input id="te-note" class="${INP_L} !text-xs" value="${esc(t.note || '')}" placeholder="নোট (ইচ্ছাধীন)"></div>
+        ${locked ? `<p class="text-[11px] text-gray-500">${t.type === 'PACKET' ? 'প্যাকেটের গ্রাম বদলালে ওই ব্যাচের খরচ ও লাভ নিজে নতুন করে হিসাব হবে।' : t.ref && t.ref.indexOf('b_') !== 0 ? 'ব্লেন্ডের এন্ট্রির হিসাব একে অপরের সাথে জড়িত, তাই শুধু নোট বদলানো যায়। ভুল হলে ব্লেন্ডটি মুছে নতুন করে বানান।' : 'এই ধরনের এন্ট্রির সব ঘর বদলানো যায় না।'}</p>` : ''}
+        ${btnMain(`txEditSave('${t.id}')`, 'সংশোধন সেভ করুন', 'sky')}
+        <button onclick="closeModal();deleteTx('${t.id}')" class="w-full text-red-600 font-bold py-1.5 text-xs"><i class="fa-solid fa-trash-can mr-1"></i>এই এন্ট্রি মুছুন</button>`);
+}
+function txEditSave(id) {
+    if (!canWrite()) return;
+    const t = db.txs.find(x => x.id === id); if (!t) return;
+    const F = TX_EDIT_FIELDS[t.type] || ['note'], has = k => F.includes(k), nt = Object.assign({}, t);
+    nt.note = el('te-note').value.trim();
+    if (has('item')) nt.item = el('te-item').value;
+    if (has('cat')) nt.item = el('te-cat').value;
+    if ((has('item') || has('cat')) && !String(nt.item || '').trim()) { alert('আইটেম বেছে নিন'); return; }
+    if (has('grams')) { nt.grams = round(num(el('te-g').value), 3); if (nt.grams <= 0) { alert('গ্রাম লিখুন'); return; } }
+    if (has('price')) { nt.pricePerKg = round(num(el('te-p').value), 4); if (nt.pricePerKg <= 0) { alert('কেজি দর লিখুন'); return; } }
+    if (t.type === 'OPENING' || t.type === 'RESTOCK') nt.amountTk = round(nt.grams / 1000 * nt.pricePerKg, 4);
+    if (has('total')) { nt.amountTk = round(num(el('te-t').value), 4); if (nt.amountTk < 0 || (t.type === 'EXPENSE' && nt.amountTk <= 0)) { alert('টাকার অঙ্ক ঠিকমতো লিখুন'); return; } }
+    if (has('date')) {
+        const v = el('te-date').value;
+        if (!v) { alert('তারিখ দিন'); return; }
+        if (v !== dayKey(t.ts)) {
+            const o = new Date(t.ts), [y, m, d] = v.split('-').map(Number);
+            nt.ts = new Date(y, m - 1, d, o.getHours(), o.getMinutes(), o.getSeconds(), o.getMilliseconds()).getTime();
+            nt.date = dateStr(nt.ts);
+        }
+    }
+    // বদলের পর কোনো আইটেমের স্টক মাইনাসে গেলে আটকাই
+    const test = compute(db.txs.map(x => x.id === id ? nt : x), db.batches);
+    if (test.negatives.length) { alert('এই বদলে ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক মাইনাসে চলে যাবে। তারিখ বা পরিমাণ ঠিক করে আবার চেষ্টা করুন।'); return; }
+    if (canon(plain(nt)) === canon(plain(t))) { closeModal(); toast('কিছু বদলায়নি'); return; }
+    nt.synced = false;
+    db.txs = db.txs.map(x => x.id === id ? nt : x);
+    closeModal(); refresh(); toast('এন্ট্রি সংশোধন হয়েছে, হিসাব নতুন করে হয়েছে');
+}
+
+// ---------- মোছা ----------
+function deleteTx(id) {
+    if (measGuard(db.txs.find(x => x.id === id))) return;
+    const t = db.txs.find(x => x.id === id); if (!t) return;
+    if (t.type !== 'EXPENSE' && t.ref) { deleteGroup(t.ref); return; }
+    tryDelete([id], null, 'এই লেনদেনটি মুছবেন?');
+}
+function deleteGroup(ref) {
+    const ids = db.txs.filter(t => t.ref === ref).map(t => t.id);
+    const isBatch = ref.indexOf('b_') === 0;
+    tryDelete(ids, isBatch ? ref : null, isBatch ? 'পুরো ব্যাচ ও তার সব এন্ট্রি মুছবেন? স্টক আগের অবস্থায় ফিরবে।' : 'পুরো ব্লেন্ডের সব এন্ট্রি মুছবেন?');
+}
+function tryDelete(ids, batchId, msg) { if (!canWrite()) return; ensureBk();
+    const idSet = new Set(ids);
+    const remTx = db.txs.filter(t => !idSet.has(t.id));
+    const remB = db.batches.filter(b => b.id !== batchId);
+    const test = compute(remTx, remB);
+    if (test.negatives.length) { alert('এটি মুছলে ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক মাইনাসে চলে যাবে। আগে পরের এন্ট্রিগুলো মুছুন।'); return; }
+    if (!confirm(msg)) return;
+    db.pendingDeleteTx.push(...ids);
+    if (batchId) db.pendingDeleteBatch.push(batchId);
+    db.txs = remTx; db.batches = remB;
+    if (batchId && db.running && db.running.id === batchId) { db.running = null; db.runningDirty = true; }
+    refresh(); toast('মুছে ফেলা হয়েছে');
+}
+
+// ---------- মডাল ----------
+function openModal(title, html) { el('modal-title').innerHTML = title; el('modal-body').innerHTML = html; el('modal').classList.remove('hidden'); }
+function closeModal() { el('modal').classList.add('hidden'); }
+function itemOptions(sel) { return state.items.map(i => `<option value="${i.idx}" ${i.idx === sel ? 'selected' : ''}>${esc(i.name)} (${fg(i.stock)})</option>`).join(''); }
+const btnMain = (fn, txt, color) => `<button onclick="${fn}" class="w-full bg-${color}-600 hover:bg-${color}-700 text-white font-bold py-2 rounded-lg text-xs shadow">${txt}</button>`;
+
+// অন্যান্য খরচ
+const EXP_CATS = ['ডেলিভারি', 'বিজ্ঞাপন', 'মজুরি', 'ভাড়া', 'পেমেন্ট/বিকাশ চার্জ', 'অন্যান্য'];
+function openExpense() {
+    openModal('<i class="fa-solid fa-receipt text-orange-600 mr-1.5"></i>অন্যান্য খরচ', `
+        <p class="text-gray-500">ডেলিভারি, বিজ্ঞাপন, মজুরি, ভাড়া ইত্যাদি খরচ লিখুন। এটা লাইফটাইম নিট লাভ থেকে কাটা যাবে।</p>
+        <div><label class="block font-bold text-gray-700 mb-1">ধরন</label><select id="ex-cat" class="${INP_L}">${EXP_CATS.map(c => `<option>${esc(c)}</option>`).join('')}</select></div>
+        <div><label class="block font-bold text-gray-700 mb-1">টাকা (৳)</label><input id="ex-t" type="number" inputmode="decimal" class="${INP}"></div>
+        <input id="ex-note" class="${INP_L} !text-xs" placeholder="নোট (ইচ্ছাধীন)">
+        ${btnMain('expenseSave()', 'সেভ করুন', 'orange')}`);
+}
+function expenseSave() { if (!canWrite()) return;
+    const cat = el('ex-cat').value, t = num(el('ex-t').value);
+    if (t <= 0) { alert('টাকার পরিমাণ লিখুন'); return; }
+    db.txs.push(makeTx('EXPENSE', cat, 0, 0, t, '', el('ex-note').value.trim(), Date.now()));
+    closeModal(); refresh(); toast('খরচ সেভ হয়েছে');
+}
+
+// ব্যাচ সম্পাদনা
+
+// ---------- ব্যাচের উপাদান সংশোধন (ভুল গ্রাম / বাদ পড়া আইটেম) ----------
+
+// ---------- ব্যাচের শুরু ও শেষের মাপা ওজন সংশোধন ----------
+function measGuard(t) {
+    if (t && t.type === 'PACKET' && t.ref) { const b = db.batches.find(x => x.id === t.ref); if (b && b.meas && b.meas[t.item]) { openMeasEdit(b.id, t.item); return true; } }
+    return false;
+}
+function stockAt(name, ts) { const st2 = compute(db.txs.filter(t => t.ts < ts), []); const it = st2.map[name]; return it ? it.stock : 0; }
+function batchMeasSection(b) {
+    const rows = Object.keys(b.meas).map(n => {
+        const m = b.meas[n], has = m.end !== null && m.end !== undefined, used = has ? Math.max(0, m.start - m.end) : 0;
+        return `<div class="flex items-center justify-between border-t border-amber-100 px-2 py-1.5">
+            <div><b class="text-gray-800">${esc(n)}</b><div class="text-[10px] text-gray-500">শুরু ${fg(m.start)} • শেষ ${has ? fg(m.end) : '<span class="text-amber-700">লেখা হয়নি</span>'} • ব্যবহার <b>${fg(used)}</b></div></div>
+            <button onclick="openMeasEdit('${b.id}', decodeURIComponent('${encodeURIComponent(n)}'))" class="text-sky-600 px-2"><i class="fa-solid fa-pen"></i></button></div>`;
+    }).join('');
+    return `<div class="border border-amber-200 rounded-lg overflow-hidden no-print">
+        <div class="bg-amber-50 px-2 py-1 font-bold text-amber-900"><i class="fa-solid fa-scale-balanced mr-1"></i>মাপা ওজন: শুরু ও শেষ (ভুল হলে এখানে ঠিক করুন)</div>
+        ${rows}
+        <button onclick="openMeasAdd('${b.id}')" class="w-full text-left px-2 py-2 border-t border-amber-100 text-emerald-700 font-bold"><i class="fa-solid fa-circle-plus mr-1"></i>বাদ পড়া আইটেম যোগ করুন</button></div>`;
+}
+function openMeasAdd(bid) {
+    const b = db.batches.find(x => x.id === bid); if (!b || !canWrite()) return;
+    const left = state.items.filter(i => !(b.meas && b.meas[i.name]));
+    if (!left.length) { toast('সব আইটেমই তালিকায় আছে'); return; }
+    openModal('<i class="fa-solid fa-circle-plus text-emerald-600 mr-1.5"></i>বাদ পড়া আইটেম', `
+        <p class="text-gray-500">যে আইটেম ব্যাচে ব্যবহার করেছিলেন কিন্তু শুরু বা শেষে মাপতে ভুলে গিয়েছিলেন, সেটা বেছে নিন। পরের ধাপে শুরু ও শেষের ওজন লিখবেন।</p>
+        <select id="ma-item" class="${INP_L}">${left.map(i => `<option>${esc(i.name)}</option>`).join('')}</select>
+        <button onclick="openMeasEdit('${bid}', el('ma-item').value)" class="w-full bg-emerald-600 text-white font-bold rounded-xl py-2.5">এগিয়ে যান</button>`);
+}
+function openMeasEdit(bid, item) {
+    const b = db.batches.find(x => x.id === bid); if (!b || !canWrite()) return;
+    const m = (b.meas || {})[item] || { before: round(stockAt(item, b.ts), 3), start: '', end: null };
+    openModal(`<i class="fa-solid fa-scale-balanced text-amber-600 mr-1.5"></i>মাপা ওজন: ${esc(item)}`, `
+        <p class="text-gray-500">ব্যাচ শুরুর আগে সিস্টেমে ${esc(item)} ছিল <b>${fg(m.before)}</b>। শুরুর আর শেষের মাপা ওজন ঠিক করলে ঘাটতি, ব্যবহার, খরচ ও লাভ নিজে নতুন করে হিসাব হবে।</p>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">শুরুর মাপা ওজন (গ্রাম)</label><input id="me-s" type="number" inputmode="decimal" oninput="measPrev()" value="${m.start === '' ? '' : esc(m.start)}" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">শেষের মাপা ওজন (গ্রাম)</label><input id="me-e" type="number" inputmode="decimal" oninput="measPrev()" value="${m.end === null || m.end === undefined ? '' : esc(m.end)}" class="${INP}" placeholder="ফাঁকা = ব্যবহার হয়নি"></div>
+        </div>
+        <div id="me-prev" class="bg-amber-50 border border-amber-100 rounded-xl p-2.5 space-y-1"></div>
+        <input type="hidden" id="me-id" value="${esc(bid)}"><input type="hidden" id="me-item" value="${esc(item)}"><input type="hidden" id="me-b" value="${esc(m.before)}">
+        ${btnMain('measEditSave()', 'সংশোধন সেভ করুন', 'amber')}`);
+    measPrev();
+}
+function measPrev() {
+    const pv = el('me-prev'); if (!pv) return;
+    const before = num(el('me-b').value), sv = el('me-s').value, ev = el('me-e').value;
+    if (sv === '') { pv.innerHTML = '<span class="text-gray-500">শুরুর ওজন লিখুন</span>'; return; }
+    const S = num(sv), diff = before - S, hasE = ev !== '', E = num(ev), used = hasE ? S - E : 0;
+    pv.innerHTML = `${row2('শুরুতে ' + (diff > EPS ? 'ঘাটতি' : diff < -EPS ? 'বাড়তি' : 'ঠিক'), fg(Math.abs(diff)))}${row2('ব্যবহার (শুরু − শেষ)', hasE ? fg(used) : 'শেষ ওজন লেখা হয়নি')}${hasE && E > S + EPS ? '<div class="text-red-600">শেষের ওজন শুরুর চেয়ে বেশি হতে পারে না</div>' : ''}`;
+}
+function measEditSave() {
+    if (!canWrite()) return;
+    const bid = el('me-id').value, item = el('me-item').value, b = db.batches.find(x => x.id === bid); if (!b) return;
+    const before = num(el('me-b').value), sv = el('me-s').value, ev = el('me-e').value;
+    if (sv === '') { alert('শুরুর মাপা ওজন লিখুন'); return; }
+    const S = round(num(sv), 3), hasE = ev !== '', E = hasE ? round(num(ev), 3) : null;
+    if (S < 0) { alert('শুরুর ওজন ঠিকমতো লিখুন'); return; }
+    if (hasE && (E < 0 || E > S + EPS)) { alert('শেষের ওজন শুরুর ওজনের চেয়ে বেশি হতে পারে না'); return; }
+    const old = (b.meas || {})[item] || { soldG: 0, soldTk: 0 };
+    const mine = db.txs.filter(t => t.ref === bid && t.item === item && (t.grp === 's' || t.grp === 'p'));
+    const oldPacket = mine.find(t => t.grp === 'p');
+    const tag = (t, g) => { t.grp = g; return t; };
+    const news = [], diff = before - S; let k = db.txs.filter(t => t.ref === bid).length + 1;
+    let soldG = 0, soldTk = 0;
+    if (diff > EPS) {
+        soldG = Math.min(old.soldG || 0, diff); soldTk = old.soldG > 0 ? round((old.soldTk || 0) * soldG / old.soldG, 4) : 0;
+        const eatG = Math.max(0, diff - soldG);
+        if (soldG > 0) news.push(tag(makeTx('BULK', item, soldG, 0, soldTk, bid, 'ব্যাচের আগে কম পাওয়া অংশ থেকে বিক্রি', b.ts + k++), 's'));
+        if (eatG > EPS) news.push(tag(makeTx('EAT', item, eatG, 0, 0, bid, 'অটো ঘাটতি (ব্যাচের আগে ওজন মেপে)', b.ts + k++), 's'));
+    } else if (diff < -EPS) news.push(tag(makeTx('ADJUST_IN', item, -diff, 0, 0, bid, 'মাপা ওজন বেশি, স্টক সংশোধন', b.ts + k++), 's'));
+    if (hasE && S - E > EPS) news.push(tag(makeTx('PACKET', item, round(S - E, 3), 0, 0, bid, '', oldPacket ? oldPacket.ts : b.ts + 100), 'p'));
+    const ids = new Set(mine.map(t => t.id)), newTxs = db.txs.filter(t => !ids.has(t.id)).concat(news);
+    const test = compute(newTxs, db.batches);
+    if (test.negatives.length) { alert('এই ওজনে ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক মাইনাসে চলে যায়। শুরু বা শেষের ওজন আবার দেখুন।'); return; }
+    ensureBk();
+    mine.forEach(t => db.pendingDeleteTx.push(t.id));
+    db.txs = newTxs;
+    b.meas = Object.assign({}, b.meas || {}); b.meas[item] = { before, start: S, end: E, soldG, soldTk };
+    b.synced = false;
+    closeModal(); refresh(); toast('ওজন সংশোধন হয়েছে, ব্যাচের খরচ ও লাভ নতুন করে হিসাব হয়েছে');
+}
+function batchIngredients(b) {
+    if (b.meas) return batchMeasSection(b);
+    const ps = db.txs.filter(t => t.ref === b.id && t.type === 'PACKET').sort((x, y) => x.ts - y.ts);
+    const rows = ps.map(t => `<div class="flex items-center justify-between border-t border-amber-100 px-2 py-1.5">
+        <div><b class="text-gray-800">${esc(t.item)}</b> <span class="text-gray-500">${fg(t.grams)} • খরচ ${tk(state.costOf[t.id] || 0)}</span></div>
+        <div class="whitespace-nowrap"><button onclick="txEdit('${t.id}')" class="text-sky-600 px-1.5"><i class="fa-solid fa-pen"></i></button><button onclick="deleteTx('${t.id}')" class="text-red-500 px-1.5"><i class="fa-solid fa-trash-can"></i></button></div></div>`).join('');
+    return `<div class="border border-amber-200 rounded-lg overflow-hidden no-print">
+        <div class="bg-amber-50 px-2 py-1 font-bold text-amber-900"><i class="fa-solid fa-screwdriver-wrench mr-1"></i>উপাদান সংশোধন (ভুল গ্রাম বা বাদ পড়া আইটেম)</div>
+        ${rows || '<div class="px-2 py-1.5 text-gray-500">কোনো উপাদান নেই</div>'}
+        <button onclick="openBatchAddItem('${b.id}')" class="w-full text-left px-2 py-2 border-t border-amber-100 text-emerald-700 font-bold"><i class="fa-solid fa-circle-plus mr-1"></i>বাদ পড়া আইটেম যোগ করুন</button>
+    </div>`;
+}
+function openBatchAddItem(bid) {
+    const b = db.batches.find(x => x.id === bid); if (!b) return;
+    if (!canWrite()) return;
+    openModal('<i class="fa-solid fa-circle-plus text-emerald-600 mr-1.5"></i>ব্যাচে আইটেম যোগ', `
+        <p class="text-gray-500">ব্যাচ বানানোর সময় যে আইটেম বা গ্রাম লিখতে ভুলে গিয়েছিলেন, সেটা এখানে যোগ করুন। খরচ ব্যাচের তারিখের গড় দামে ধরা হবে এবং ব্যাচের খরচ, লাভ ও স্টক নিজে ঠিক হয়ে যাবে।</p>
+        <div><label class="block font-bold text-gray-700 mb-1">আইটেম</label><select id="ba-item" class="${INP_L}">${state.items.map(i => `<option>${esc(i.name)}</option>`).join('')}</select></div>
+        <div><label class="block font-bold text-gray-700 mb-1">পরিমাণ (গ্রাম)</label><input id="ba-g" type="number" inputmode="decimal" class="${INP}" placeholder="যেমন: 100"></div>
+        <input id="ba-note" class="${INP_L} !text-xs" placeholder="নোট (ইচ্ছাধীন)">
+        <input type="hidden" id="ba-id" value="${esc(bid)}">
+        ${btnMain('batchAddItemSave()', 'যোগ করুন', 'emerald')}`);
+}
+function batchAddItemSave() {
+    if (!canWrite()) return;
+    const bid = el('ba-id').value, b = db.batches.find(x => x.id === bid); if (!b) return;
+    const item = el('ba-item').value, g = round(num(el('ba-g').value), 3);
+    if (!item || g <= 0) { alert('আইটেম বেছে গ্রাম লিখুন'); return; }
+    const k = db.txs.filter(t => t.ref === bid).length + 1;
+    const t = makeTx('PACKET', item, g, 0, 0, bid, el('ba-note').value.trim() || 'ব্যাচে পরে যোগ করা', b.ts + k);   // ব্যাচের সময়ে বসাই, তাই ওই সময়ের গড় দামে খরচ
+    const test = compute(db.txs.concat([t]), db.batches);
+    if (test.negatives.length) { alert('ব্যাচের সময় ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক যথেষ্ট ছিল না। পরিমাণ কমিয়ে চেষ্টা করুন।'); return; }
+    db.txs.push(t); closeModal(); refresh(); toast('আইটেম যোগ হয়েছে, ব্যাচের খরচ ও লাভ নতুন করে হিসাব হয়েছে');
+}
+
+// ---------- এই ব্যাচের রেসিপিতে এখনকার স্টকে কতটি প্যাকেট বানানো যাবে ----------
+function planCalc(bid, nIn, sellIn) {
+    const b = state.batches.find(x => x.id === bid); if (!b) return null;
+    const P = b.packets > 0 ? b.packets : 1, by = {};
+    db.txs.forEach(t => { if (t.ref === bid && t.type === 'PACKET') by[t.item] = (by[t.item] || 0) + num(t.grams); });
+    const rows = Object.keys(by).filter(n => by[n] > EPS).map(n => {
+        const it = state.map[n], gPer = by[n] / P, stock = it ? Math.max(0, it.stock) : 0;
+        return { name: n, gPer, stock, avg: it ? it.avg : 0, repl: it ? it.repl : 0, maxP: Math.floor((stock + 1e-9) / gPer) };
+    });
+    if (!rows.length) return { b, P, rows, max: 0, n: 0, lim: [] };
+    const max = Math.min(...rows.map(r => r.maxP)), lim = rows.filter(r => r.maxP === max).map(r => r.name);
+    const n = (nIn === undefined || nIn === '') ? max : Math.max(0, Math.floor(num(nIn)));
+    const sell = (sellIn === undefined || sellIn === '') ? b.sellingPrice : num(sellIn);
+    rows.forEach(r => { r.need = r.gPer * n; r.left = r.stock - r.need; r.short = Math.max(0, r.need - r.stock); r.cost = r.need / 1000 * r.avg; r.buyCost = r.short / 1000 * r.repl; });
+    const pkgPer = b.packagingCost / P, costPer = rows.reduce((s, r) => s + r.gPer / 1000 * r.avg, 0) + pkgPer;
+    return { b, P, rows, max, lim, n, sell, pkgPer, costPer, totalCost: costPer * n, revenue: sell * n, profit: (sell - costPer) * n, buyTotal: rows.reduce((s, r) => s + r.buyCost, 0) };
+}
+function planHtml(bid, nIn, sellIn) {
+    const c = planCalc(bid, nIn, sellIn);
+    if (!c) return '<p class="text-red-600">ব্যাচ পাওয়া যায়নি</p>';
+    if (!c.rows.length) return '<p class="text-gray-500">এই ব্যাচে প্যাকেটে ব্যবহার হওয়া কোনো আইটেম নেই।</p>';
+    const cls = 'p-1.5 text-right', anyShort = c.rows.some(r => r.short > EPS);
+    const rows = c.rows.map(r => `<tr class="border-t ${r.short > EPS ? 'bg-red-50' : (c.lim.includes(r.name) ? 'bg-amber-50' : '')}">
+        <td class="p-1.5 text-left font-bold text-gray-800">${esc(r.name)}${c.lim.includes(r.name) ? ' <span class="text-[9px] text-amber-700">(সীমা)</span>' : ''}</td>
+        <td class="${cls}">${fmt(r.gPer, 1)}</td><td class="${cls}">${fmt(r.stock, 0)}</td><td class="${cls} font-bold">${fmt(r.maxP, 0)}</td>
+        <td class="${cls}">${fmt(r.need, 0)}</td><td class="${cls} ${r.short > EPS ? 'text-red-600 font-bold' : 'text-gray-600'}">${r.short > EPS ? 'কম ' + fmt(r.short, 0) : fmt(r.left, 0)}</td></tr>`).join('');
+    return `<div class="bg-purple-50 border border-purple-100 rounded-xl p-2.5 space-y-1">
+            <div class="flex justify-between"><span class="text-gray-600">এখনকার স্টকে সর্বোচ্চ বানানো যাবে</span><span class="font-extrabold text-purple-900 text-base">${fmt(c.max, 0)} প্যাকেট</span></div>
+            ${c.lim.length && c.max >= 0 ? `<div class="text-[11px] text-amber-800">যে আইটেম আগে শেষ হবে: <b>${esc(c.lim.join(', '))}</b></div>` : ''}
+        </div>
+        <div class="overflow-x-auto border rounded-lg"><table class="w-full text-[10px] whitespace-nowrap"><thead class="bg-gray-100 text-gray-600"><tr>
+            <th class="p-1.5 text-left">আইটেম</th><th class="p-1.5 text-right">গ্রাম/প্যাকেট</th><th class="p-1.5 text-right">এখন স্টক (g)</th><th class="p-1.5 text-right">কতটি প্যাকেট হবে</th><th class="p-1.5 text-right">${fmt(c.n, 0)} প্যাকেটে লাগবে (g)</th><th class="p-1.5 text-right">বাকি / কম (g)</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 space-y-1">
+            ${row2('এখনকার দামে খরচ/প্যাকেট', tk(c.costPer))}${row2('ওই ব্যাচে খরচ/প্যাকেট ছিল', tk(c.b.costPerPacket))}${row2('বিক্রি মূল্য/প্যাকেট', tk(c.sell))}
+            ${row2(fmt(c.n, 0) + ' প্যাকেটে মোট খরচ', tk(c.totalCost))}${row2('আনুমানিক আয়', tk(c.revenue))}
+            <div class="flex justify-between font-extrabold ${profitCls(c.profit)}"><span>আনুমানিক লাভ</span><span>${tk(c.profit)}</span></div>
+        </div>
+        ${anyShort ? `<div class="bg-red-50 border border-red-100 rounded-xl p-2.5 text-red-700">${fmt(c.n, 0)} প্যাকেটের জন্য স্টকে কম পড়বে। কিনতে হবে (শেষ কেনা দরে আনুমানিক ${tk(c.buyTotal)}): ${c.rows.filter(r => r.short > EPS).map(r => esc(r.name) + ' ' + fmt(r.short, 0) + ' g').join(', ')}</div>` : ''}
+        <p class="text-[10px] text-gray-500">হিসাব ওই ব্যাচের অনুপাতে (প্যাকেজিং ও দাম আপনি বদলাতে পারেন)। সব প্যাকেট বিক্রি হবে ধরে লাভ। এটা শুধু হিসাব, স্টকে কিছু বদলায় না।</p>`;
+}
+function openPlan(bid) {
+    const b = state.batches.find(x => x.id === bid); if (!b) return;
+    openModal('<i class="fa-solid fa-calculator text-purple-600 mr-1.5"></i>এই রেসিপিতে কতটি প্যাকেট বানানো যাবে', `
+        <p class="text-gray-500">ব্যাচ (${esc(b.date)}, ${fmt(b.packets, 0)} প্যাকেট) এ প্রতিটি আইটেম যে অনুপাতে ব্যবহার হয়েছিল, সেই অনুপাতে এখনকার স্টক দিয়ে হিসাব।</p>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">কতটি বানাতে চান?</label><input id="pl-n" type="number" inputmode="numeric" oninput="planRender()" placeholder="ফাঁকা = সর্বোচ্চ" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">বিক্রি মূল্য/প্যাকেট ৳</label><input id="pl-sell" type="number" inputmode="decimal" oninput="planRender()" value="${esc(b.sellingPrice)}" class="${INP}"></div>
+        </div>
+        <input type="hidden" id="pl-id" value="${esc(bid)}">
+        <div id="pl-out" class="space-y-2"></div>`);
+    planRender();
+}
+function planRender() { const o = el('pl-out'); if (o) o.innerHTML = planHtml(el('pl-id').value, el('pl-n').value, el('pl-sell').value); }
+function openBatchEdit(id) {
+    const b = state.batches.find(x => x.id === id); if (!b) return;
+    openModal('<i class="fa-solid fa-pen text-indigo-600 mr-1.5"></i>ব্যাচ সম্পাদনা', `
+        <p class="text-gray-500">অবিক্রীত প্যাকেট বিক্রি হলে "বিক্রি হয়েছে" সংখ্যা বাড়ান, লাভ নিজে ঠিক হবে। কাঁচামালের ওজন ভুল হলে বা আইটেম বাদ পড়লে ব্যাচ কার্ডের "উপাদান সংশোধন" অংশ ব্যবহার করুন।</p>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">মোট প্যাকেট</label><input id="be-p" type="number" inputmode="decimal" value="${esc(b.packets)}" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">বিক্রি হয়েছে</label><input id="be-s" type="number" inputmode="decimal" value="${esc(b.soldPackets)}" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">বিক্রি মূল্য/প্যাকেট ৳</label><input id="be-sell" type="number" inputmode="decimal" value="${esc(b.sellingPrice)}" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">প্যাকেজিং খরচ ৳</label><input id="be-pkg" type="number" inputmode="decimal" value="${esc(b.packagingCost)}" class="${INP}"></div>
+        </div>
+        <input id="be-note" class="${INP_L} !text-xs" value="${esc(b.note)}" placeholder="নোট">
+        <input type="hidden" id="be-id" value="${esc(id)}">
+        ${btnMain('batchEditSave()', 'আপডেট করুন', 'indigo')}`);
+}
+function batchEditSave() { if (!canWrite()) return;
+    const id = el('be-id').value, b = db.batches.find(x => x.id === id); if (!b) return;
+    const P = num(el('be-p').value), S = num(el('be-s').value);
+    if (P <= 0) { alert('প্যাকেট সংখ্যা লিখুন'); return; }
+    if (S < 0 || S > P) { alert('বিক্রি হওয়া প্যাকেট ০ থেকে মোট প্যাকেটের মধ্যে হতে হবে'); return; }
+    b.packets = P; b.soldPackets = S; b.sellingPrice = num(el('be-sell').value); b.packagingCost = num(el('be-pkg').value);
+    b.note = el('be-note').value.trim(); b.synced = false;
+    recompute();
+    const r = state.batches.find(x => x.id === id);
+    if (r) b.snap = { packetCost: round(r.totalPacketCost, 2), bulkRevenue: round(r.bulkRev, 2), bulkCost: round(r.bulkCost, 2), eatCost: round(r.eatCost, 2), otherCost: round(r.otherCost, 2), netProfit: round(r.net, 2), margin: round(r.margin, 2) };
+    closeModal(); refresh(); toast('ব্যাচ আপডেট হয়েছে');
+}
+
+// রিস্টক / নতুন আইটেম
+function openRestock(idx) {
+    const sel = idx === undefined ? '__new__' : String(idx);
+    openModal('<i class="fa-solid fa-cart-plus text-sky-600 mr-1.5"></i>নতুন কেনা (রিস্টক)', `
+        <p class="text-gray-500">কেনা স্টক আগের স্টকের সাথে যোগ হবে এবং গড় কেজি দর নিজে হিসাব হবে।<br>নতুন গড় = (পুরোনো স্টকের মূল্য + এই কেনার মূল্য) ÷ মোট ওজন</p>
+        <div><label class="block font-bold text-gray-700 mb-1">আইটেম</label>
+            <select id="rs-item" onchange="restockPreview()" class="${INP_L}">${state.items.map(i => `<option value="${i.idx}" ${String(i.idx) === sel ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}<option value="__new__" ${sel === '__new__' ? 'selected' : ''}>+ নতুন আইটেম</option></select>
+            <input id="rs-name" class="${INP_L} mt-1.5 ${sel === '__new__' ? '' : 'hidden'}" placeholder="নতুন আইটেমের নাম"></div>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">কেনা পরিমাণ (গ্রাম)</label><input id="rs-g" type="number" inputmode="decimal" oninput="restockPreview()" class="${INP}" placeholder="যেমন ১০০০০"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">কেজি দর (৳)</label><input id="rs-p" type="number" inputmode="decimal" oninput="restockPreview()" class="${INP}" placeholder="যেমন ১২০০"></div></div>
+        <div id="rs-prev" class="bg-sky-50 border border-sky-100 rounded-xl p-2.5 space-y-1"></div>
+        ${btnMain('restockSave()', 'রিস্টক সেভ করুন', 'sky')}`);
+    restockPreview();
+}
+function restockPreview() {
+    const v = el('rs-item').value; el('rs-name').classList.toggle('hidden', v !== '__new__');
+    const g = num(el('rs-g').value), p = num(el('rs-p').value);
+    const it = v === '__new__' ? null : state.items[parseInt(v)];
+    const oldS = it ? it.stock : 0, oldV = it ? it.value : 0;
+    const newS = oldS + g, newV = oldV + g / 1000 * p;
+    setHtml('rs-prev', `${row2('বর্তমান স্টক / গড় দর', it ? fg(it.stock) + ' / ৳' + fmt(it.avg) : 'নতুন আইটেম')}${row2('এই কেনার মূল্য', tk(g / 1000 * p))}${row2('নতুন মোট স্টক', fg(newS))}<div class="flex justify-between font-extrabold text-sky-900"><span>নতুন গড় দর</span><span>৳ ${fmt(newS > 0 ? newV / newS * 1000 : 0)}/কেজি</span></div>${it && g > 0 ? `<div class="text-[11px] text-gray-500 border-t border-sky-100 pt-1">হিসাব: (৳${fmt(oldV)} + ৳${fmt(g / 1000 * p)}) ÷ ${fg(newS)} • এই কেনার কেজি দর ৳${fmt(p)} (শেষ কেনা দর হিসেবে সংরক্ষিত থাকবে)</div>` : ''}`);
+}
+function restockSave() { if (!canWrite()) return;
+    const v = el('rs-item').value, g = num(el('rs-g').value), p = num(el('rs-p').value);
+    let name;
+    if (v === '__new__') {
+        name = el('rs-name').value.trim();
+        if (!name) { alert('আইটেমের নাম লিখুন'); return; }
+        if (state.map[name]) { alert('এই নামে আইটেম আগে থেকেই আছে, তালিকা থেকে বেছে নিন'); return; }
+    } else name = state.items[parseInt(v)].name;
+    if (g <= 0) { alert('গ্রাম লিখুন'); return; }
+    if (p <= 0) { alert('কেজি দর লিখুন'); return; }
+    const type = db.txs.some(t => t.item === name) ? 'RESTOCK' : 'OPENING';
+    db.txs.push(makeTx(type, name, g, p, g / 1000 * p, '', '', Date.now()));
+    closeModal(); refresh(); toast('রিস্টক সেভ হয়েছে, গড় দর আপডেট হয়েছে');
+}
+
+// খাওয়া / ঘাটতি
+function openEat(idx) {
+    openModal('<i class="fa-solid fa-utensils text-rose-600 mr-1.5"></i>খাওয়া / ঘাটতি', `
+        <p class="text-gray-500">ব্যাচের বাইরে যা খেয়েছেন বা নষ্ট হয়েছে, সেটা এখানে লিখুন। গড় দামে টাকায় রূপান্তর হয়ে লাভ থেকে কাটা যাবে।</p>
+        <div><label class="block font-bold text-gray-700 mb-1">আইটেম</label><select id="eat-item" onchange="eatPreview()" class="${INP_L}">${itemOptions(idx)}</select></div>
+        <div><label class="block font-bold text-gray-700 mb-1">পরিমাণ (গ্রাম)</label><input id="eat-g" type="number" inputmode="decimal" oninput="eatPreview()" class="${INP}" placeholder="যেমন ৫০"></div>
+        <input id="eat-note" class="${INP_L} !text-xs" placeholder="নোট (ইচ্ছাধীন)">
+        <div id="eat-prev" class="bg-rose-50 border border-rose-100 rounded-xl p-2.5"></div>
+        ${btnMain('eatSave()', 'সেভ করুন', 'rose')}`);
+    eatPreview();
+}
+function eatPreview() {
+    const it = state.items[parseInt(el('eat-item').value)], g = num(el('eat-g').value);
+    setHtml('eat-prev', `${row2('বর্তমান স্টক', fg(it.stock))}${row2('গড় দর', '৳' + fmt(it.avg) + '/কেজি')}<div class="flex justify-between font-extrabold text-rose-700"><span>লাভ থেকে কাটা যাবে</span><span>${tk(costNow(it, g))}</span></div>`);
+}
+function eatSave() { if (!canWrite()) return;
+    const it = state.items[parseInt(el('eat-item').value)], g = num(el('eat-g').value);
+    if (g <= 0) { alert('গ্রাম লিখুন'); return; }
+    if (g > it.stock + 1e-6) { alert('স্টকের চেয়ে বেশি লেখা যাবে না'); return; }
+    db.txs.push(makeTx('EAT', it.name, g, 0, costNow(it, g), '', el('eat-note').value.trim(), Date.now()));
+    closeModal(); refresh(); toast('খাওয়া/ঘাটতি সেভ হয়েছে');
+}
+
+// বাল্ক বিক্রি
+function openBulk(idx) {
+    openModal('<i class="fa-solid fa-scale-balanced text-blue-600 mr-1.5"></i>বাল্ক / খুচরা বিক্রি', `
+        <div><label class="block font-bold text-gray-700 mb-1">আইটেম</label><select id="bk-item" onchange="bulkPreview()" class="${INP_L}">${itemOptions(idx)}</select></div>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">বিক্রি (গ্রাম)</label><input id="bk-g" type="number" inputmode="decimal" oninput="bulkPreview()" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">মোট বিক্রয় মূল্য (৳)</label><input id="bk-t" type="number" inputmode="decimal" oninput="bulkPreview()" class="${INP}"></div></div>
+        <div id="bk-prev" class="bg-blue-50 border border-blue-100 rounded-xl p-2.5"></div>
+        ${btnMain('bulkSave()', 'সেভ করুন', 'blue')}`);
+    bulkPreview();
+}
+function bulkPreview() {
+    const it = state.items[parseInt(el('bk-item').value)], g = num(el('bk-g').value), t = num(el('bk-t').value), c = costNow(it, g);
+    setHtml('bk-prev', `${row2('গড় দামে খরচ', tk(c))}<div class="flex justify-between font-extrabold ${profitCls(t - c)}"><span>লাভ</span><span>${tk(t - c)}</span></div>`);
+}
+function bulkSave() { if (!canWrite()) return;
+    const it = state.items[parseInt(el('bk-item').value)], g = num(el('bk-g').value), t = num(el('bk-t').value);
+    if (g <= 0) { alert('গ্রাম লিখুন'); return; }
+    if (g > it.stock + 1e-6) { alert('স্টকের চেয়ে বেশি লেখা যাবে না'); return; }
+    db.txs.push(makeTx('BULK', it.name, g, 0, t, '', '', Date.now()));
+    closeModal(); refresh(); toast('বাল্ক বিক্রি সেভ হয়েছে');
+}
+
+// মিক্সড ব্লেন্ড
+let blendRows = [], blendBase = null;
+function openBlend(pre) {
+    if (state.items.length < 2) { alert('ব্লেন্ডের জন্য কমপক্ষে ২টি আইটেম লাগবে'); return; }
+    blendBase = null;
+    blendRows = [{ i: 0, g: '' }, { i: 1, g: '' }];
+    const blends = state.items.filter(i => i.isMixed);
+    openModal('<i class="fa-solid fa-blender text-purple-600 mr-1.5"></i>মিক্সড ব্লেন্ড (প্রিমিক্স)', `
+        <p class="text-gray-500">উপাদানের স্টক কমবে এবং ওই খরচ নিয়ে ব্লেন্ডটি আলাদা আইটেম হিসেবে যুক্ত হবে। উপাদানের লাইফটাইম ব্যবহারে "ব্লেন্ডে গেছে" হিসেবে ধরা থাকবে। লাভ-ক্ষতি তখনই হবে যখন ব্লেন্ডটি প্যাকেটে যাবে।</p>
+        ${blends.length ? `<div class="bg-purple-50 border border-purple-100 rounded-xl p-2"><label class="block font-bold text-purple-900 mb-1.5">আগের ব্লেন্ড বাড়াতে চাইলে বেছে নিন</label><div class="flex flex-wrap gap-1.5">${blends.map(b => `<button onclick="blendLoad(decodeURIComponent('${encodeURIComponent(b.name)}'))" class="px-2.5 py-1 rounded-full border border-purple-300 text-purple-800 bg-white font-bold">${esc(b.name)} (${fg(b.stock)})</button>`).join('')}</div><p class="text-[10px] text-gray-500 mt-1">বাছলে আগের উপাদান ও অনুপাত নিজে বসে যাবে, শুধু কত গ্রাম বাড়াবেন তা দিন। নতুন ব্লেন্ড আগেরটার সাথে যুক্ত হবে।</p></div>` : ''}
+        <div><label class="block font-bold text-gray-700 mb-1">ব্লেন্ডের নাম</label><input id="bl-name" oninput="blendPreview()" class="${INP_L} text-purple-900" value="মিক্সড ড্রাই ফ্রুটস ব্লেন্ড"></div>
+        <div id="bl-scale" class="hidden"><label class="block font-bold text-gray-700 mb-1">উপাদানের মোট ওজন (গ্রাম)</label><input id="bl-total" type="number" inputmode="decimal" oninput="blendScale(this.value)" class="${INP}"><p class="text-[10px] text-gray-500 mt-0.5">মোট ওজন দিলে আগের অনুপাতে প্রতিটি উপাদানের গ্রাম নিজে ভাগ হয়ে যাবে। চাইলে নিচে আলাদা করেও বদলাতে পারেন।</p></div>
+        <div id="bl-rows" class="space-y-2 border-t pt-2"></div>
+        <button onclick="blendAdd()" class="text-purple-700 font-bold"><i class="fa-solid fa-plus-circle mr-1"></i>আরেকটি উপাদান</button>
+        <div><label class="block font-bold text-gray-700 mb-1">ব্লেন্ডিংয়ে ওজন কমা/নষ্ট (গ্রাম, ইচ্ছাধীন)</label><input id="bl-loss" type="number" inputmode="decimal" oninput="blendPreview()" class="${INP}" placeholder="০"></div>
+        <div id="bl-prev" class="bg-purple-50 border border-purple-100 rounded-xl p-2.5 space-y-1"></div>
+        ${btnMain('blendSave()', 'ব্লেন্ড সেভ করুন', 'purple')}`);
+    blendRender();
+    if (typeof pre === 'string' && state.map[pre] && state.map[pre].isMixed) blendLoad(pre);
+}
+// আগের ব্লেন্ডের শেষ রেসিপি (উপাদান ও গ্রাম)
+function blendRecipe(name) {
+    const ins = db.txs.filter(t => t.type === 'BLEND_IN' && t.item === name).sort((a, b) => b.ts - a.ts);
+    if (!ins.length) return null;
+    const rows = db.txs.filter(t => t.type === 'BLEND_OUT' && t.ref === ins[0].ref)
+        .map(t => { const it = state.map[t.item]; return it ? { i: it.idx, g: num(t.grams) } : null; }).filter(Boolean);
+    return rows.length ? rows : null;
+}
+function blendLoad(name) {
+    const rec = blendRecipe(name);
+    el('bl-name').value = name;
+    if (rec) {
+        blendBase = rec.map(r => ({ i: r.i, g: r.g }));
+        blendRows = rec.map(r => ({ i: r.i, g: String(r.g) }));
+        el('bl-total').value = Math.round(rec.reduce((s, r) => s + r.g, 0));
+        el('bl-scale').classList.remove('hidden');
+    } else {
+        blendBase = null; el('bl-scale').classList.add('hidden');
+    }
+    blendRender();
+}
+function blendScale(v) {
+    const T = num(v), sum = blendBase ? blendBase.reduce((s, r) => s + r.g, 0) : 0;
+    if (!blendBase || sum <= 0) return;
+    blendRows = blendBase.map(r => ({ i: r.i, g: T > 0 ? String(Math.round(r.g / sum * T * 10) / 10) : '' }));
+    blendRender();
+}
+function blendRender() {
+    el('bl-rows').innerHTML = blendRows.map((r, k) => `<div class="flex items-center gap-2">
+        <select onchange="blendRows[${k}].i=parseInt(this.value);blendPreview()" class="flex-1 border p-1.5 rounded text-xs">${state.items.map(i => `<option value="${i.idx}" ${i.idx === r.i ? 'selected' : ''}>${esc(i.name)} (${fg(i.stock)})</option>`).join('')}</select>
+        <input type="number" inputmode="decimal" value="${esc(r.g)}" oninput="blendRows[${k}].g=this.value;blendPreview()" class="w-24 border p-1.5 rounded text-xs text-center font-bold" placeholder="গ্রাম">
+        <button onclick="blendDel(${k})" class="text-red-500 p-1"><i class="fa-solid fa-xmark"></i></button></div>`).join('');
+    blendPreview();
+}
+function blendAdd() { blendRows.push({ i: 0, g: '' }); blendRender(); }
+function blendDel(k) { if (blendRows.length <= 1) return; blendRows.splice(k, 1); blendRender(); }
+function blendCalc() {
+    const per = {};
+    blendRows.forEach(r => { const g = num(r.g); if (g > 0) per[r.i] = (per[r.i] || 0) + g; });
+    let tg = 0, tc = 0; const errors = [], parts = [];
+    Object.keys(per).forEach(k => {
+        const it = state.items[parseInt(k)], g = per[k], c = costNow(it, g);
+        if (g > it.stock + 1e-6) errors.push(`${it.name}: স্টক ${fg(it.stock)} এর চেয়ে বেশি`);
+        tg += g; tc += c; parts.push({ it, g, c });
+    });
+    const le = el('bl-loss'), loss = le ? num(le.value) : 0, net = tg - loss;
+    if (tg > 0 && loss >= tg) errors.push('ওজন কমা মোট ওজনের চেয়ে কম হতে হবে');
+    return { tg, loss, net, tc, avg: net > 0 ? tc / net * 1000 : 0, errors, parts };
+}
+function blendPreview() {
+    const c = blendCalc();
+    const nmEl = el('bl-name'), nm = nmEl ? nmEl.value.trim() : '', ex = nm && state.map[nm];
+    const joinHtml = (ex && ex.isMixed && c.net > 0)
+        ? `<div class="border-t border-purple-200 pt-1 mt-1 space-y-0.5"><div class="text-purple-800 font-bold">আগের ব্লেন্ডে যুক্ত হবে</div>${row2('এখন স্টক', fg(ex.stock) + ' • ৳' + fmt(ex.avg) + '/কেজি')}${row2('যুক্ত হওয়ার পর স্টক', fg(ex.stock + c.net))}<div class="flex justify-between font-extrabold text-purple-900"><span>নতুন গড় কেজি দর</span><span>৳ ${fmt((ex.value + c.tc) / (ex.stock + c.net) * 1000)}/কেজি</span></div></div>` : '';
+    setHtml('bl-prev', `${row2('মোট উপাদান ওজন', fg(c.tg))}${c.loss > 0 ? row2('ওজন কমা/নষ্ট', '- ' + fg(c.loss)) : ''}${row2('ব্লেন্ডের ওজন', fg(c.net))}${row2('মোট খরচ', tk(c.tc))}<div class="flex justify-between font-extrabold text-purple-900"><span>গড় কেজি দর</span><span>৳ ${fmt(c.avg)}/কেজি</span></div>${joinHtml}${c.errors.length ? '<div class="text-red-600">' + esc(c.errors.join(' | ')) + '</div>' : ''}`);
+}
+function blendSave() { if (!canWrite()) return;
+    const name = el('bl-name').value.trim(), c = blendCalc();
+    if (!name) { alert('ব্লেন্ডের নাম লিখুন'); return; }
+    if (c.tg <= 0) { alert('উপাদান ও গ্রাম লিখুন'); return; }
+    if (c.errors.length) { alert(c.errors.join('\n')); return; }
+    if (c.parts.some(p => p.it.name === name)) { alert('ব্লেন্ডের নাম উপাদানের নামের সমান হতে পারে না'); return; }
+    const ex = state.map[name];
+    if (ex && !ex.isMixed) { alert('এই নামে সাধারণ আইটেম আছে, অন্য নাম দিন'); return; }
+    const now = Date.now(), ref = uid('bl_');
+    let k = 1;
+    c.parts.forEach(p => db.txs.push(makeTx('BLEND_OUT', p.it.name, p.g, 0, p.c, ref, 'ব্লেন্ড: ' + name, now + (k++))));
+    db.txs.push(makeTx('BLEND_IN', name, c.net, c.avg, c.tc, ref, c.loss > 0 ? 'ওজন কমেছে ' + fg(c.loss) : '', now + (k++)));
+    closeModal(); ui.tab = 'stock'; refresh(); toast('ব্লেন্ড তৈরি হয়েছে');
+}
+
+// ---------- এক্সপোর্ট ----------
+function download(name, text) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+const csvCell = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+function exportTxCsv() {
+    const lines = [['তারিখ', 'ধরন', 'আইটেম', 'গ্রাম', 'কেজি দর', 'পরিমাণ/আয় ৳', 'খরচ ৳', 'রেফারেন্স', 'নোট'].map(csvCell).join(',')];
+    db.txs.slice().sort((a, b) => a.ts - b.ts).forEach(t => lines.push([t.date, TYPE_LABEL[t.type] || t.type, t.item, t.grams, t.pricePerKg, t.amountTk, round(state.costOf[t.id] || 0, 2), t.ref, t.note].map(csvCell).join(',')));
+    download('safabox-transactions.csv', lines.join('\n'));
+}
+function exportItemsCsv() {
+    const lines = [['আইটেম', 'মোট কেনা g', 'মোট কেনা ৳', 'লাইফটাইম গড় দর', 'প্যাকেটে g', 'প্যাকেটে ৳', 'বাল্ক g', 'খাওয়া g', 'খাওয়া ৳', 'বর্তমান স্টক g', 'বর্তমান গড় দর', 'স্টক মূল্য ৳'].map(csvCell).join(',')];
+    state.items.forEach(i => lines.push([i.name, round(i.boughtG, 1), round(i.boughtCost, 2), round(i.lifeAvgBuy, 2), round(i.pktG, 1), round(i.pktCost, 2), round(i.bulkG, 1), round(i.eatG, 1), round(i.eatCost, 2), round(i.stock, 1), round(i.avg, 2), round(i.value, 2)].map(csvCell).join(',')));
+    download('safabox-items.csv', lines.join('\n'));
+}
+
+// ---------- সাবস্ক্রিপশন / মেয়াদ ----------
+const isAdminUser = () => !!(cloudUser && cloudUser.email && cloudUser.email.toLowerCase() === ADMIN_EMAIL);
+function accFromDoc(data) {
+    if (!data) return null;
+    if (data.plan === 'trial') { const c = data.createdAt && data.createdAt.toMillis ? data.createdAt.toMillis() : Date.now(); return { plan: 'trial', untilMs: c + TRIAL_DAYS * 864e5 }; }
+    if (data.plan === 'paid' && data.until && data.until.toMillis) return { plan: 'paid', untilMs: data.until.toMillis() };
+    return { plan: data.plan || '', untilMs: 0 };
+}
+function setAcc(a) {
+    const adm = isAdminUser();
+    acc = { known: true, plan: adm ? 'admin' : a.plan, untilMs: a.untilMs, ok: adm || a.untilMs > Date.now() };
+    try { if (cloudUser) localStorage.setItem('sbx_acc_' + cloudUser.uid, JSON.stringify(acc)); } catch (e) {}
+    renderAccBanner(); updateBadge();
+}
+function loadAccCache(uid) {
+    try { const a = JSON.parse(localStorage.getItem('sbx_acc_' + uid)); if (a && a.known) { a.ok = a.plan === 'admin' || a.untilMs > Date.now(); return a; } } catch (e) {}
+    return { known: false, ok: true, plan: '', untilMs: 0 };
+}
+function canWrite() {
+    if (DEMO || acc.ok) return true;
+    toast('আপনার মেয়াদ শেষ: এখন শুধু দেখা ও CSV নেওয়া যাবে। মেয়াদ বাড়াতে যোগাযোগ করুন');
+    return false;
+}
+function renderAccBanner() {
+    const b = el('acc-banner'); if (!b) return;
+    if (DEMO || !cloudUser || !acc.known || acc.plan === 'admin') { b.innerHTML = ''; return; }
+    const days = Math.ceil((acc.untilMs - Date.now()) / 864e5);
+    const msg = 'আসসালামু আলাইকুম, SafaBoxBD লেজারের মেয়াদ বাড়াতে চাই। আমার Gmail: ' + (cloudUser.email || '');
+    const link = SUPPORT_WHATSAPP ? ` <a href="https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" class="underline font-bold"><i class="fa-brands fa-whatsapp mr-0.5"></i>WhatsApp-এ যোগাযোগ</a>` : '';
+    let html = '';
+    if (!acc.ok) html = `<div class="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1.5"><i class="fa-solid fa-lock mr-1"></i>মেয়াদ শেষ: এখন শুধু দেখা ও CSV নেওয়া যাবে, নতুন এন্ট্রি বন্ধ।${link}</div>`;
+    else if (acc.plan === 'trial') html = `<div class="bg-sky-100 text-sky-800 text-xs font-semibold px-3 py-1.5"><i class="fa-solid fa-gift mr-1"></i>ফ্রি ট্রায়াল: আর ${days} দিন বাকি${link}</div>`;
+    else if (days <= 7) html = `<div class="bg-amber-100 text-amber-900 text-xs font-semibold px-3 py-1.5"><i class="fa-solid fa-hourglass-half mr-1"></i>সাবস্ক্রিপশনের মেয়াদ আর ${days} দিন বাকি${link}</div>`;
+    b.innerHTML = html;
+}
+// ---- অ্যাডমিন: ইমেইল অনুমোদন ও মেয়াদ ----
+async function openAdmin() {
+    if (!isAdminUser()) return;
+    if (!FB) { toast('ইন্টারনেট চালু করুন'); return; }
+    openModal('অ্যাডমিন: সাবস্ক্রিপশন', '<p class="text-gray-500">লোড হচ্ছে...</p>');
+    try {
+        const { fs, f } = FB, snap = await f.getDocs(f.collection(fs, 'access')), rows = [];
+        snap.forEach(d => { const a = accFromDoc(d.data()); rows.push({ email: d.id, plan: a ? a.plan : '', untilMs: a ? a.untilMs : 0 }); });
+        rows.sort((x, y) => y.untilMs - x.untilMs);
+        const now = Date.now();
+        const list = rows.length ? rows.map(r => {
+            const days = Math.ceil((r.untilMs - now) / 864e5), live = r.untilMs > now;
+            const label = r.plan === 'trial' ? 'ট্রায়াল' : 'পেইড';
+            return `<div class="border rounded-lg p-2 ${live ? 'bg-white' : 'bg-red-50'}">
+                <div class="font-bold text-gray-800 break-all">${esc(r.email)}</div>
+                <div class="text-[11px] ${live ? 'text-emerald-700' : 'text-red-600'}">${label} • ${live ? days + ' দিন বাকি (' + new Date(r.untilMs).toLocaleDateString('bn-BD') + ' পর্যন্ত)' : 'মেয়াদ শেষ'}</div>
+                <div class="flex gap-1 mt-1.5 flex-wrap">
+                    <button onclick="adminExtend('${esc(r.email)}',30)" class="bg-emerald-600 text-white rounded px-2 py-1">+৩০ দিন</button>
+                    <button onclick="adminExtend('${esc(r.email)}',90)" class="bg-emerald-600 text-white rounded px-2 py-1">+৯০</button>
+                    <button onclick="adminExtend('${esc(r.email)}',365)" class="bg-emerald-600 text-white rounded px-2 py-1">+৩৬৫</button>
+                    ${live ? `<button onclick="adminStop('${esc(r.email)}')" class="bg-red-100 text-red-700 rounded px-2 py-1">বন্ধ করুন</button>` : ''}
+                </div></div>`;
+        }).join('') : '<p class="text-gray-500">এখনো কোনো ইমেইল নেই</p>';
+        el('modal-body').innerHTML = `
+            <div class="border rounded-lg p-2 bg-emerald-50 space-y-1.5">
+                <div class="font-bold text-emerald-800">নতুন ইমেইল অনুমোদন</div>
+                <input id="ad-email" type="email" placeholder="ক্রেতার Gmail" class="w-full border rounded-lg p-2">
+                <select id="ad-days" class="w-full border rounded-lg p-2"><option value="30">৩০ দিন</option><option value="90">৯০ দিন</option><option value="365">৩৬৫ দিন</option></select>
+                <button onclick="adminAdd()" class="w-full bg-emerald-600 text-white font-bold rounded-lg py-2">অনুমোদন দিন</button>
+            </div>
+            <div class="font-bold text-gray-700">সব ইমেইল (${rows.length})</div>${list}`;
+    } catch (e) { el('modal-body').innerHTML = '<p class="text-red-600">লোড হয়নি: ' + esc(e.code || e.message || '') + '</p>'; }
+}
+async function adminSet(email, addDays, stopNow) {
+    const { fs, f } = FB, ref = f.doc(fs, 'access', email), snap = await f.getDoc(ref), now = Date.now();
+    let base = now;
+    if (!stopNow && snap.exists()) { const a = accFromDoc(snap.data()); if (a && a.untilMs > now) base = a.untilMs; }
+    const until = f.Timestamp.fromMillis(stopNow ? now : base + addDays * 864e5);
+    const data = { email, plan: 'paid', until };
+    if (!snap.exists()) data.createdAt = f.serverTimestamp();
+    await f.setDoc(ref, data, { merge: true });
+}
+async function adminExtend(email, days) { try { await adminSet(String(email).toLowerCase(), days, false); toast('মেয়াদ বাড়ানো হয়েছে'); openAdmin(); } catch (e) { toast('হয়নি: ' + (e.code || e.message)); } }
+async function adminStop(email) { if (!confirm(email + ' এর অ্যাক্সেস এখনই বন্ধ করবেন? (ডাটা মুছবে না)')) return; try { await adminSet(String(email).toLowerCase(), 0, true); toast('বন্ধ করা হয়েছে'); openAdmin(); } catch (e) { toast('হয়নি: ' + (e.code || e.message)); } }
+async function adminAdd() {
+    const email = (el('ad-email').value || '').trim().toLowerCase(), days = Number(el('ad-days').value) || 30;
+    if (!/^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]+$/.test(email)) { toast('সঠিক ইমেইল লিখুন'); return; }
+    try { await adminSet(email, days, false); toast('অনুমোদন দেওয়া হয়েছে'); openAdmin(); } catch (e) { toast('হয়নি: ' + (e.code || e.message)); }
+}
+
+// ---------- ক্লাউড (Firebase) ----------
+const FB_VER = '10.14.1';
+let FB = null, FBp = null, authStarted = false, unsubs = [], lastErr = null, lastSyncAt = 0, renderT = null;
+let retryN = 0, syncing = false, syncAgain = false, syncTimer = null;
+const queued = {}, inflight = new Set();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const emptyDb = () => ({ txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false });
+function canon(o) {
+    if (Array.isArray(o)) return '[' + o.map(canon).join(',') + ']';
+    if (o && typeof o === 'object') return '{' + Object.keys(o).filter(k => o[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canon(o[k])).join(',') + '}';
+    return JSON.stringify(o === undefined ? null : o);
+}
+const plain = o => { const c = JSON.parse(JSON.stringify(o)); delete c.synced; delete c._sat; return c; };
+function renderSoon() { clearTimeout(renderT); renderT = setTimeout(render, 150); }
+
+function pendingCount() { return db.txs.filter(t => !t.synced).length + db.batches.filter(b => !b.synced).length + db.pendingDeleteTx.length + db.pendingDeleteBatch.length + (db.runningDirty ? 1 : 0) + (db.pricesDirty ? 1 : 0); }
+function sig() { return db.txs.map(t => t.id).join(',') + '#' + db.batches.map(b => b.id).join(',') + '#' + (db.running ? db.running.id : ''); }
+function updateBadge() {
+    const ic = el('sync-icon'), tx = el('sync-text'); if (!ic) return;
+    if (DEMO) { ic.className = 'fa-solid fa-flask'; tx.textContent = 'ডেমো'; return; }
+    if (!cloudUser) { ic.className = 'fa-solid fa-right-to-bracket'; tx.textContent = 'লগইন'; return; }
+    if (acc.known && !acc.ok) { ic.className = 'fa-solid fa-lock'; tx.textContent = 'মেয়াদ শেষ'; return; }
+    const p = pendingCount();
+    if (syncing) { ic.className = 'fa-solid fa-rotate fa-spin'; tx.textContent = 'সিঙ্ক হচ্ছে...'; }
+    else if (!navigator.onLine) { ic.className = 'fa-solid fa-cloud-bolt'; tx.textContent = p ? `অফলাইন (${p})` : 'অফলাইন'; }
+    else if (lastErr && lastErr.code === 'permission-denied') { ic.className = 'fa-solid fa-triangle-exclamation'; tx.textContent = 'অনুমতি নেই'; }
+    else if (p > 0) { ic.className = 'fa-solid fa-cloud-arrow-up'; tx.textContent = `${p}টি বাকি`; }
+    else { ic.className = 'fa-solid fa-cloud'; tx.textContent = 'সিঙ্ক ঠিক'; }
+}
+function scheduleSync() { retryN = 0; clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(false), 600); }
+
+// ---- কনফিগ ----
+function getFbConfig() {
+    if (FIREBASE_CONFIG.apiKey) return FIREBASE_CONFIG;
+    try { const c = JSON.parse(localStorage.getItem('sbx_fbcfg')); if (c && c.apiKey && c.projectId) return c; } catch (e) {}
+    return null;
+}
+function saveFbConfig() {
+    const txt = el('fb-cfg').value || '', c = {}, re = /["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g; let m;
+    while ((m = re.exec(txt))) c[m[1]] = m[2];
+    if (!c.apiKey || !c.projectId || !c.appId) { el('login-msg').textContent = 'কনফিগ ঠিকমতো পেস্ট হয়নি। Firebase কনসোল থেকে পুরো firebaseConfig কপি করে দিন।'; return; }
+    localStorage.setItem('sbx_fbcfg', JSON.stringify(c)); location.reload();
+}
+
+// ---- Firebase লোড (ডায়নামিক, তাই অফলাইনে অ্যাপ আটকায় না) ----
+function loadFirebase() {
+    if (FBp) return FBp;
+    FBp = (async () => {
+        const cfg = getFbConfig(); if (!cfg) throw new Error('nocfg');
+        const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+        const [A, Au, Fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
+        const app = A.initializeApp(cfg);
+        const auth = Au.getAuth(app);
+        const fs = Fs.initializeFirestore(app, { localCache: Fs.persistentLocalCache({ tabManager: Fs.persistentMultipleTabManager() }) });
+        FB = { app, auth, fs, Au, f: Fs };
+        return FB;
+    })();
+    FBp.catch(() => { FBp = null; });
+    return FBp;
+}
+function startAuth(F) {
+    if (authStarted || !F) return; authStarted = true;
+    F.Au.onAuthStateChanged(F.auth, onAuth);
+}
+
+// ---- লগইন / লগআউট ----
+function showLogin(msg) {
+    const s = el('login-screen'); if (!s) return;
+    s.classList.remove('hidden');
+    const cfg = getFbConfig();
+    el('login-main').classList.toggle('hidden', !cfg);
+    el('login-setup').classList.toggle('hidden', !!cfg);
+    el('login-msg').textContent = msg || '';
+}
+function hideLogin() { const s = el('login-screen'); if (s) s.classList.add('hidden'); }
+async function doLogin() {
+    el('login-msg').textContent = '';
+    try {
+        const F = await loadFirebase(); startAuth(F);
+        await F.Au.signInWithPopup(F.auth, new F.Au.GoogleAuthProvider());
+    } catch (e) {
+        const c = e && e.code;
+        el('login-msg').textContent =
+            c === 'auth/unauthorized-domain' ? 'এই ওয়েবসাইটের ঠিকানা Firebase-এ অনুমোদিত নয় (Authentication → Settings → Authorized domains)।' :
+            c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request' ? '' :
+            c === 'auth/popup-blocked' ? 'ব্রাউজার পপআপ আটকে দিয়েছে। পপআপ Allow করে আবার চাপুন।' :
+            !navigator.onLine ? 'ইন্টারনেট চালু করুন' : (c || (e && e.message) || 'লগইন হয়নি');
+    }
+}
+async function doLogout() {
+    if (!FB) { toast('ইন্টারনেট চালু করে লগআউট করুন'); return; }
+    if (pendingCount() > 0 && !confirm(pendingCount() + 'টি এন্ট্রি এখনো ক্লাউডে যায়নি। এই ফোনে থাকবে, আবার লগইন করলে যাবে। লগআউট করবেন?')) return;
+    try { await FB.Au.signOut(FB.auth); } catch (e) {}
+    onAuth(null);
+}
+function onAuth(u) {
+    if (u) {
+        const info = { uid: u.uid, name: u.displayName || '', email: u.email || '' };
+        if (!cloudUser || cloudUser.uid !== u.uid) enterApp(info, true);
+        else { cloudUser = info; attachListeners(); scheduleSync(); }
+    } else {
+        detach(); cloudUser = null;
+        try { localStorage.removeItem('sbx_last_user'); } catch (e) {}
+        LS_KEY = 'safabox_cloud_v3_anon'; LS_DRAFT = 'safabox_cloud_draft_v3_anon';
+        acc = { known: false, ok: true, plan: '', untilMs: 0 }; renderAccBanner();
+        db = emptyDb(); recompute(); updateBadge(); showLogin();
+    }
+}
+function enterApp(info, live) {
+    cloudUser = info;
+    try { localStorage.setItem('sbx_last_user', JSON.stringify(info)); } catch (e) {}
+    LS_KEY = 'safabox_cloud_v3_' + info.uid; LS_DRAFT = 'safabox_cloud_draft_v3_' + info.uid;
+    db = loadDb(); bf = loadBf(); retryN = 0; ui.tab = 'home';
+    acc = loadAccCache(info.uid);
+    if (isAdminUser()) setAcc({ plan: 'admin', untilMs: 0 }); else renderAccBanner();
+    hideLogin();
+    importLegacy(false);
+    recompute(); render(); updateBadge();
+    if (live) { attachListeners(); scheduleSync(); }
+}
+
+// ---- পুরোনো (Apps Script) লেজারের ডাটা এই ফোন থেকে তোলা ----
+function importLegacy(force) {
+    if (DEMO || !cloudUser) return;
+    const flag = 'sbx_imported_' + cloudUser.uid;
+    if (!force && (localStorage.getItem(flag) || db.txs.length || db.batches.length)) return;
+    let d = null; try { d = JSON.parse(localStorage.getItem(LEGACY_KEY)); } catch (e) {}
+    const nT = d && Array.isArray(d.txs) ? d.txs.length : 0, nB = d && Array.isArray(d.batches) ? d.batches.length : 0;
+    if (!nT && !nB) { if (force) toast('এই ফোনে পুরোনো লেজারের ডাটা পাওয়া যায়নি'); return; }
+    const ok = confirm(`এই ফোনে পুরোনো লেজারের ${nT}টি লেনদেন ও ${nB}টি ব্যাচ আছে। এই অ্যাকাউন্টে তুলবেন?`);
+    try { localStorage.setItem(flag, '1'); } catch (e) {}
+    if (!ok) return;
+    const have = new Set(db.txs.map(t => t.id)), haveB = new Set(db.batches.map(b => b.id));
+    d.txs.forEach(t => { if (t && t.id && !have.has(t.id)) db.txs.push(Object.assign({}, t, { synced: false })); });
+    (d.batches || []).forEach(b => { if (b && b.id && !haveB.has(b.id)) db.batches.push(Object.assign({}, b, { synced: false })); });
+    if (d.running && !db.running) { db.running = d.running; db.runningDirty = true; }
+    persist(); recompute();
+    if (force) render();
+    toast('পুরোনো ডাটা তোলা হয়েছে, ক্লাউডে যাচ্ছে...');
+    scheduleSync();
+}
+
+// ---- দিনভিত্তিক বাকেট: প্রতিদিনের সব এন্ট্রি একটা ডকুমেন্টে (write/read/স্টোরেজ কম) ----
+// users/{uid}/d/{YYYY-MM-DD}: { u: সার্ভার সময়, <আইডি>: '<এন্ট্রির JSON>', ... }
+function dayKey(ts) {
+    const d = new Date(ts || Date.now());
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+const BK_MAX = 1200;   // এক বাকেটে সর্বোচ্চ এন্ট্রি (১ MiB সীমার অনেক নিচে)
+function ensureBk() {
+    if (DEMO || !db) return;
+    db.bkMap = db.bkMap || {};
+    const all = db.txs.concat(db.batches), cnt = {};
+    all.forEach(o => { if (o._bk) cnt[o._bk] = (cnt[o._bk] || 0) + 1; });
+    all.forEach(o => {
+        if (!o._bk) {
+            const base = dayKey(o.ts); let k = base, n = 1;
+            while ((cnt[k] || 0) >= BK_MAX) { n++; k = base + '-' + n; }
+            o._bk = k; cnt[k] = (cnt[k] || 0) + 1;
+        }
+        db.bkMap[o.id] = o._bk;
+    });
+}
+
+// ---- ক্লাউড থেকে শোনা (শুধু বদলানো বাকেট আসে) ----
+function detach() { unsubs.forEach(f => { try { f(); } catch (e) {} }); unsubs = []; }
+function onListenErr(err) { lastErr = err; updateBadge(); if (err && err.code === 'permission-denied') toast('অনুমতি নেই: Firestore সিকিউরিটি রুলস দেখুন'); }
+function applyBucket(bk, data) {
+    let changed = false; const ids = new Set();
+    db.bkMap = db.bkMap || {};
+    Object.keys(data).forEach(k => {
+        if (k === 'u' || typeof data[k] !== 'string') return;
+        let o; try { o = JSON.parse(data[k]); } catch (e) { return; }
+        if (!o || o.id !== k) return;
+        ids.add(k);
+        const isB = k.startsWith('b_'), list = isB ? db.batches : db.txs, pd = isB ? db.pendingDeleteBatch : db.pendingDeleteTx;
+        if (pd.includes(k)) return;
+        const obj = Object.assign(o, { synced: true, _bk: bk, _sat: Date.now() });
+        db.bkMap[k] = bk;
+        const i = list.findIndex(x => x.id === k);
+        if (i < 0) { list.push(obj); changed = true; return; }
+        const loc = list[i];
+        if (!loc.synced) {   // এই ডিভাইসের অসেভ পরিবর্তন থাকলে তা-ই থাকে
+            if (canon(plain(loc)) === canon(plain(obj))) { loc.synced = true; loc._sat = Date.now(); }
+            return;
+        }
+        if (canon(plain(loc)) !== canon(plain(obj))) { list[i] = obj; changed = true; }
+    });
+    // অন্য ডিভাইসে মোছা: এই বাকেটের সিঙ্ক করা আইটেম ডকুমেন্টে আর নেই
+    // (এইমাত্র সিঙ্ক হওয়া আইটেম ৫ সেকেন্ড ছাড় পায়, তারপর আবার যাচাই হয়)
+    const snapAt = Date.now(); let held = false;
+    const gone = x => {
+        if (!(x.synced && x._bk === bk && !ids.has(x.id))) return false;
+        if (x._sat && snapAt - x._sat < 5000) { held = true; return false; }
+        return true;
+    };
+    ['txs', 'batches'].forEach(key => { const n = db[key].length; db[key] = db[key].filter(x => !gone(x)); if (db[key].length !== n) changed = true; });
+    if (held) setTimeout(() => {
+        let ch = false;
+        ['txs', 'batches'].forEach(key => { const n = db[key].length; db[key] = db[key].filter(x => !(x.synced && x._bk === bk && !ids.has(x.id) && x._sat !== undefined && x._sat <= snapAt)); if (db[key].length !== n) ch = true; });
+        if (ch) { recompute(); persist(); renderSoon(); }
+    }, 5500);
+    // মোছার নিশ্চিতকরণ: বাকেটে আইডি আর নেই
+    const isConf = id => db.bkMap[id] === bk && !ids.has(id);
+    const conf = db.pendingDeleteTx.filter(isConf).concat(db.pendingDeleteBatch.filter(isConf));
+    if (conf.length) {
+        db.pendingDeleteTx = db.pendingDeleteTx.filter(id => !isConf(id));
+        db.pendingDeleteBatch = db.pendingDeleteBatch.filter(id => !isConf(id));
+        conf.forEach(id => { delete db.bkMap[id]; });
+    }
+    return changed;
+}
+function attachListeners() {
+    detach();
+    if (!FB || !cloudUser || DEMO) return;
+    const { fs, f } = FB, uid = cloudUser.uid, lastKey = 'sbx_lastu2_' + uid;
+    const since = f.Timestamp.fromMillis(Number(localStorage.getItem(lastKey)) || 0);
+    let maxU = 0;
+    const finish = changed => {
+        if (maxU) { const nv = maxU - 10000, prev = Number(localStorage.getItem(lastKey)) || 0; if (nv > prev) { try { localStorage.setItem(lastKey, String(nv)); } catch (e) {} } }
+        recompute(); persist();
+        if (changed) renderSoon(); else updateBadge();
+    };
+    const uOf = data => (data && data.u && data.u.toMillis) ? data.u.toMillis() : 0;
+
+    unsubs.push(f.onSnapshot(f.query(f.collection(fs, 'users', uid, 'd'), f.where('u', '>', since)), snap => {
+        let changed = false;
+        snap.docChanges().forEach(ch => {
+            const d = ch.doc, data = d.data();
+            maxU = Math.max(maxU, uOf(data));
+            if (d.metadata.hasPendingWrites || ch.type === 'removed') return;
+            if (applyBucket(d.id, data)) changed = true;
+        });
+        finish(changed);
+    }, onListenErr));
+
+    const myEmail = (cloudUser.email || '').toLowerCase();
+    if (isAdminUser()) { setAcc({ plan: 'admin', untilMs: 0 }); }
+    else if (myEmail) {
+        let creating = false;
+        unsubs.push(f.onSnapshot(f.doc(fs, 'access', myEmail), d => {
+            if (d.exists()) { const a = accFromDoc(d.data()); if (a) { setAcc(a); scheduleSync(); } return; }
+            if (d.metadata.fromCache) return;   // সার্ভারের উত্তর না আসা পর্যন্ত অপেক্ষা
+            if (!creating) {
+                creating = true;   // প্রথমবার লগইন: ৭ দিনের ফ্রি ট্রায়াল শুরু
+                f.setDoc(f.doc(fs, 'access', myEmail), { email: myEmail, plan: 'trial', createdAt: f.serverTimestamp() }).catch(onListenErr);
+            }
+        }, onListenErr));
+    }
+
+    unsubs.push(f.onSnapshot(f.doc(fs, 'users', uid, 'meta', 'prices'), d => {
+        if (d.metadata.hasPendingWrites || !d.exists() || db.pricesDirty) return;
+        let p = {}; try { p = JSON.parse(d.data().p) || {}; } catch (e) {}
+        if (canon(p) !== canon(db.prices || {})) { db.prices = p; finish(true); }
+    }, onListenErr));
+
+    unsubs.push(f.onSnapshot(f.doc(fs, 'users', uid, 'meta', 'running'), d => {
+        if (d.metadata.hasPendingWrites || !d.exists() || db.runningDirty) return;
+        let run = null; try { const data = d.data(); run = data && data.run ? JSON.parse(data.run) : null; } catch (e) {}
+        if (canon(run) !== canon(db.running)) { db.running = run; finish(true); }
+    }, onListenErr));
+}
+
+// ---- পুরোনো কাঠামো (tx / batches আলাদা ডকুমেন্ট) থেকে একবার নতুন কাঠামোয় আনা ----
+async function ensureSchema() {
+    const uid = cloudUser.uid, key = 'sbx_schema2_' + uid, migKey = 'sbx_mig_' + uid;
+    if (localStorage.getItem(key) === '1') return;
+    const { fs, f } = FB, sref = f.doc(fs, 'users', uid, 'meta', 'schema');
+    if (!localStorage.getItem(migKey)) {
+        const s = await f.getDoc(sref);
+        if (s.exists() && s.data().v >= 2) { localStorage.setItem(key, '1'); return; }
+        const [a, b] = await Promise.all([f.getDocs(f.collection(fs, 'users', uid, 'tx')), f.getDocs(f.collection(fs, 'users', uid, 'batches'))]);
+        const clean = o => { const x = Object.assign({}, o); delete x.u; delete x.deleted; return x; };
+        a.forEach(d => { const o = d.data(); if (!o || o.deleted || db.txs.some(t => t.id === d.id)) return; db.txs.push(Object.assign(clean(o), { id: d.id, synced: false })); });
+        b.forEach(d => { const o = d.data(); if (!o || o.deleted || db.batches.some(x => x.id === d.id)) return; db.batches.push(Object.assign(clean(o), { id: d.id, synced: false })); });
+        db.txs.forEach(t => { t.synced = false; }); db.batches.forEach(x => { x.synced = false; });   // সবই নতুন কাঠামোয় যাবে
+        persist(); recompute();
+        try { localStorage.setItem(migKey, '1'); } catch (e) {}
+    }
+    await finalizeSchema();
+}
+async function finalizeSchema() {
+    const uid = cloudUser.uid, key = 'sbx_schema2_' + uid, migKey = 'sbx_mig_' + uid;
+    if (localStorage.getItem(key) === '1' || !localStorage.getItem(migKey) || pendingCount() > 0) return;
+    const { fs, f } = FB;
+    await f.setDoc(f.doc(fs, 'users', uid, 'meta', 'schema'), { v: 2, at: f.serverTimestamp() });
+    try { localStorage.setItem(key, '1'); localStorage.removeItem(migKey); } catch (e) {}
+}
+
+// ---- ক্লাউডে পাঠানো (offline হলে Firebase নিজে জমা রাখে) ----
+async function pushPending(manual) {
+    const { fs, f } = FB, uid = cloudUser.uid, groups = {}, ops = [];
+    ensureBk();
+    const grp = bk => groups[bk] || (groups[bk] = { fields: {}, keys: {}, applies: [] });
+    const addItem = (listFn, o) => {
+        const c = plain(o), sg = canon(c), key = 'i:' + o.id;
+        if (queued[key] === sg) return;
+        const G = grp(o._bk);
+        G.fields[o.id] = JSON.stringify(c); G.keys[key] = sg;
+        G.applies.push(() => { const x = listFn().find(y => y.id === o.id); if (x && canon(plain(x)) === sg) { x.synced = true; x._sat = Date.now(); } });
+    };
+    db.txs.filter(t => !t.synced).forEach(t => addItem(() => db.txs, t));
+    db.batches.filter(b => !b.synced).forEach(b => addItem(() => db.batches, b));
+    const addDel = (id, drop) => {
+        const bk = db.bkMap && db.bkMap[id], key = 'd:' + id;
+        if (!bk) { drop(); return; }   // কখনো ক্লাউডে যায়নি, তাই মোছার কিছু নেই
+        if (queued[key]) return;
+        const G = grp(bk);
+        G.fields[id] = f.deleteField(); G.keys[key] = 'd';
+        G.applies.push(() => { drop(); if (db.bkMap) delete db.bkMap[id]; });
+    };
+    db.pendingDeleteTx.slice().forEach(id => addDel(id, () => { db.pendingDeleteTx = db.pendingDeleteTx.filter(x => x !== id); }));
+    db.pendingDeleteBatch.slice().forEach(id => addDel(id, () => { db.pendingDeleteBatch = db.pendingDeleteBatch.filter(x => x !== id); }));
+    Object.keys(groups).forEach(bk => {
+        const G = groups[bk];
+        ops.push({ keys: G.keys, applies: G.applies, ref: f.doc(fs, 'users', uid, 'd', bk), data: Object.assign({}, G.fields, { u: f.serverTimestamp() }) });
+    });
+    if (db.runningDirty) {
+        const run = db.running ? JSON.stringify(db.running) : null, key = 'run', sg = 'r:' + run;
+        if (queued[key] !== sg) ops.push({ keys: { [key]: sg }, applies: [() => { if (db.runningDirty && (db.running ? JSON.stringify(db.running) : null) === run) db.runningDirty = false; }], ref: f.doc(fs, 'users', uid, 'meta', 'running'), data: { run, u: f.serverTimestamp() } });
+    }
+    if (db.pricesDirty) {
+        const pj = JSON.stringify(db.prices || {}), key = 'prices', sg = 'p:' + pj;
+        if (queued[key] !== sg) ops.push({ keys: { [key]: sg }, applies: [() => { if (db.pricesDirty && JSON.stringify(db.prices || {}) === pj) db.pricesDirty = false; }], ref: f.doc(fs, 'users', uid, 'meta', 'prices'), data: { p: pj, u: f.serverTimestamp() } });
+    }
+    for (let i = 0; i < ops.length; i += 15) {   // রুলসে ব্যাচড রাইটে অ্যাক্সেস-কলের সীমা আছে, তাই ছোট ভাগে পাঠাই
+        const chunk = ops.slice(i, i + 15), wb = f.writeBatch(fs);
+        chunk.forEach(o => { wb.set(o.ref, o.data, { merge: true }); Object.assign(queued, o.keys); });
+        const release = () => chunk.forEach(o => Object.keys(o.keys).forEach(k => delete queued[k]));
+        const p = wb.commit().then(() => { chunk.forEach(o => o.applies.forEach(a => a())); release(); lastErr = null; persist(); updateBadge(); })
+            .catch(err => { release(); lastErr = err; if (err && err.code === 'permission-denied') toast('অনুমতি নেই: Firestore সিকিউরিটি রুলস দেখুন'); updateBadge(); })
+            .finally(() => inflight.delete(p));
+        inflight.add(p);
+    }
+    if (inflight.size) await Promise.race([Promise.allSettled([...inflight]), sleep(manual ? 12000 : 8000)]);
+}
+async function syncNow(manual) {
+    if (DEMO) { updateBadge(); if (manual) toast('ডেমো মোড: ডাটা শুধু এই ফোনে থাকে'); return; }
+    if (!cloudUser) { if (manual) showLogin(); return; }
+    if (!FB) {
+        try { startAuth(await loadFirebase()); } catch (e) { updateBadge(); if (manual) toast('ইন্টারনেট নেই বা সার্ভারে যোগাযোগ হয়নি'); return; }
+    }
+    if (!FB.auth.currentUser) { updateBadge(); return; }   // লগইন যাচাই শেষ হলে onAuth নিজেই সিঙ্ক চালাবে
+    if (!acc.known) { updateBadge(); if (manual) toast('অ্যাকাউন্টের মেয়াদ যাচাই হচ্ছে, একটু পরে আবার চাপুন'); return; }
+    if (!acc.ok) { updateBadge(); if (manual) canWrite(); return; }
+    if (syncing) { syncAgain = true; return; }
+    syncing = true; updateBadge();
+    try { await ensureSchema(); await pushPending(manual); await finalizeSchema(); } catch (e) { lastErr = e; }
+    syncing = false; lastSyncAt = Date.now(); persist(); updateBadge();
+    const p = pendingCount();
+    if (manual) toast(p ? 'কিছু এন্ট্রি এখনো যায়নি, নেট থাকলে নিজে চলে যাবে' : 'সবকিছু ক্লাউডে আছে');
+    if (p > 0 && navigator.onLine && retryN < 5) { retryN++; clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(false), 3000 * Math.pow(2, retryN - 1)); }
+    else if (!p) retryN = 0;
+    if (syncAgain) { syncAgain = false; scheduleSync(); }
+}
+function clearLocal() {
+    if (DEMO) { resetDemo(); return; }
+    if (db.running && !confirm('একটি ব্যাচ চলছে। ক্যাশ মুছলে চলমান ব্যাচের তথ্য হারাবে। তবু মুছবেন?')) return;
+    if (pendingCount() > 0 && !confirm('ক্লাউডে যায়নি এমন ' + pendingCount() + 'টি এন্ট্রি আছে, মুছলে সেগুলো হারাবে। তবু মুছবেন?')) return;
+    if (!pendingCount() && !confirm('এই ফোনের কপি মুছে ক্লাউড থেকে নতুন করে লোড করবেন?')) return;
+    localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_DRAFT);
+    if (cloudUser) localStorage.removeItem('sbx_lastu2_' + cloudUser.uid);
+    location.reload();
+}
+function bootCloud() {
+    const hd = document.querySelector('header'); if (hd && !el('acc-banner')) hd.insertAdjacentHTML('afterend', '<div id="acc-banner" class="no-print"></div>');
+    setInterval(() => { if (acc.known && cloudUser) { acc.ok = acc.plan === 'admin' || acc.untilMs > Date.now(); renderAccBanner(); updateBadge(); } }, 60000);
+    let last = null; try { last = JSON.parse(localStorage.getItem('sbx_last_user')); } catch (e) {}
+    if (last && last.uid) enterApp(last, false); else showLogin();
+    loadFirebase().then(startAuth).catch(() => { updateBadge(); if (!cloudUser) showLogin(getFbConfig() ? 'ইন্টারনেট চালু করে আবার চেষ্টা করুন' : ''); });
+}
+
+// ---------- ডেমো মোড ----------
+function seedDemo() {
+    const D = 86400000, now = Date.now();
+    const add = (type, item, g, p, amt, ref, note, ts) => { const t = makeTx(type, item, g, p, amt, ref, note, ts); t.synced = true; db.txs.push(t); };
+    const t0 = now - 20 * D;
+    [['কাঠবাদাম', 5000, 1300], ['কাজুবাদাম', 3000, 1400], ['কিসমিস', 4000, 900], ['আখরোট', 2000, 1000]]
+        .forEach((x, k) => add('OPENING', x[0], x[1], x[2], x[1] / 1000 * x[2], '', 'শুরুর স্টক', t0 + k));
+    add('RESTOCK', 'কিসমিস', 3000, 1000, 3000, '', 'নতুন কেনা', now - 14 * D);
+    add('RESTOCK', 'কাজুবাদাম', 2000, 1500, 3000, '', 'নতুন কেনা', now - 13 * D);
+    const mkBatch = (days, packets, pkg, sell, sold, uses, other, note) => {
+        const ts = now - days * D, id = uid('b_'); let k = 1;
+        db.batches.push({ id, ts, date: dateStr(ts), packets, soldPackets: sold, packagingCost: pkg, sellingPrice: sell, note, synced: true });
+        recompute();
+        uses.forEach(u => { const it = state.map[u[0]]; add('PACKET', u[0], u[1], 0, u[1] / 1000 * (it ? it.avg : 0), id, '', ts + (k++)); });
+        if (other > 0) add('EXPENSE', 'অন্যান্য খরচ', 0, 0, other, id, 'ব্যাচের অন্যান্য খরচ', ts + (k++));
+        recompute();
+        const r = state.batches.find(x => x.id === id), b = db.batches.find(x => x.id === id);
+        if (r) b.snap = { packetCost: round(r.totalPacketCost, 2), bulkRevenue: round(r.bulkRev, 2), bulkCost: round(r.bulkCost, 2), eatCost: round(r.eatCost, 2), otherCost: round(r.otherCost, 2), netProfit: round(r.net, 2), margin: round(r.margin, 2) };
+    };
+    mkBatch(9, 40, 200, 160, 36, [['কাঠবাদাম', 1000], ['কাজুবাদাম', 800], ['কিসমিস', 600], ['আখরোট', 600]], 0, 'ডেমো ব্যাচ ১');
+    add('EAT', 'কিসমিস', 100, 0, 0, '', 'নমুনা: টেস্ট করা হয়েছে', now - 6 * D);
+    add('BULK', 'কাঠবাদাম', 500, 0, 700, '', 'নমুনা: খুচরা বিক্রি', now - 5 * D);
+    add('EAT', 'কাজুবাদাম', 50, 0, 0, '', 'নমুনা: নষ্ট/ঘাটতি', now - 4 * D);
+    mkBatch(3, 30, 150, 150, 30, [['কাঠবাদাম', 800], ['কাজুবাদাম', 600], ['কিসমিস', 700], ['আখরোট', 400]], 300, 'ডেমো ব্যাচ ২ (ডেলিভারি খরচসহ)');
+    add('EXPENSE', 'বিজ্ঞাপন', 0, 0, 500, '', 'নমুনা: ফেসবুক বুস্ট', now - 2 * D);
+}
+function initDemo() {
+    if (!db.txs.length && !db.batches.length) { seedDemo(); recompute(); persist(); }
+    const h = document.querySelector('header');
+    if (h) h.insertAdjacentHTML('afterend', '<div class="no-print bg-amber-100 text-amber-900 text-xs font-semibold px-3 py-1.5 flex justify-between items-center"><span><i class="fa-solid fa-flask mr-1"></i>ডেমো মোড: নমুনা ডাটা, সবকিছু ফোনেই থাকে, সার্ভারে যায় না</span><button onclick="resetDemo()" class="underline">রিসেট</button></div>');
+}
+function resetDemo() {
+    if (!confirm('ডেমো ডাটা মুছে নতুন করে নমুনা ডাটা দিয়ে শুরু করবেন?')) return;
+    localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_DRAFT); location.reload();
+}
+
+window.addEventListener('online', () => {
+    if (DEMO) return;
+    if (!FB) loadFirebase().then(startAuth).catch(() => {});
+    else scheduleSync();
+    updateBadge();
+});
+window.addEventListener('offline', updateBadge);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !DEMO && cloudUser && Date.now() - lastSyncAt > 15000) scheduleSync(); });
+window.addEventListener('DOMContentLoaded', () => { if (DEMO) { initDemo(); render(); updateBadge(); } else bootCloud(); });
+</script>
+</body>
+</html>
