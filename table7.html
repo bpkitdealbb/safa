@@ -541,27 +541,32 @@ const EPS = 0.01;
 function batchPreview() { if (db.running) ffPreview(); else sfPreview(); }
 // ---------- আগের ব্যাচের আইটেম নিয়ে নতুন ব্যাচ ----------
 function sfFromBatchPanel() {
-    const names = id => [...new Set(db.txs.filter(t => t.ref === id && t.type === 'PACKET').map(t => t.item))].filter(n => state.map[n]);
-    const opts = state.batches.slice().sort((a, b) => b.ts - a.ts).slice(0, 15).map(b => {
-        const n = names(b.id);
-        return n.length ? `<option value="${esc(b.id)}" ${bf.from === b.id ? 'selected' : ''}>${esc(String(b.date).slice(0, 10))} • ${fmt(b.packets, 0)} প্যাকেট • ${esc(n.join(', '))}</option>` : '';
-    }).join('');
-    if (!opts) return '';
-    return `<div class="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-3 text-xs">
-        <b class="text-purple-900"><i class="fa-solid fa-clone mr-1"></i>আগের ব্যাচের আইটেম নিয়ে শুরু করুন</b>
-        <select onchange="sfFromBatch(this.value)" class="${INP_L} mt-1.5"><option value="">— আগের ব্যাচ বেছে নিন —</option>${opts}</select>
-        ${bf.only ? `<div class="flex justify-between items-center mt-1.5"><span class="text-purple-800">শুধু ${bf.only.length}টি আইটেম দেখানো হচ্ছে</span><button onclick="sfShowAll()" class="underline text-purple-700 font-bold">সব আইটেম দেখান</button></div>`
-            : '<p class="text-[10px] text-gray-500 mt-1">বেছে নিলে শুধু ওই ব্যাচের আইটেমগুলো নিচে দেখাবে, আর প্যাকেট সংখ্যা, প্যাকেজিং ও বিক্রি মূল্যও বসে যাবে (শেষ ধাপে বদলানো যায়)। ওজন আপনাকে মেপে লিখতে হবে।</p>'}
-    </div>`;
+    if (!bf.only) return '';
+    const i = state.batches.findIndex(x => x.id === bf.from), b = i >= 0 ? state.batches[i] : null;
+    return `<div class="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-3 text-xs flex justify-between items-center gap-2">
+        <span class="text-purple-900"><i class="fa-solid fa-clone mr-1"></i>${b ? 'ব্যাচ #' + (i + 1) + ' (' + esc(String(b.date).slice(0, 10)) + ') এর ' : ''}<b>${bf.only.length}টি আইটেম</b> নিয়ে শুরু হচ্ছে। প্যাকেট সংখ্যা, প্যাকেজিং ও বিক্রি মূল্যও আগের ব্যাচ থেকে বসেছে।</span>
+        <button onclick="sfShowAll()" class="underline text-purple-700 font-bold whitespace-nowrap">সব আইটেম দেখান</button></div>`;
+}
+// ব্যাচ কার্ডের বাটন থেকে: ওই ব্যাচের আইটেম দিয়ে নতুন ব্যাচ শুরুর ফর্ম
+function cloneBatch(id) {
+    if (db.running) { toast('আগে চলমান ব্যাচটি শেষ করুন'); goTab('batch'); return; }
+    if (!sfFromBatch(id)) return;
+    goTab('batch'); window.scrollTo(0, 0);
+}
+// ব্যাচ পিন/আনপিন
+function togglePin(id) {
+    if (!canWrite()) return;
+    const b = db.batches.find(x => x.id === id); if (!b) return;
+    b.pin = !b.pin; b.synced = false;
+    refresh();
 }
 function sfFromBatch(id) {
-    if (!id) { sfShowAll(); return; }
-    const b = state.batches.find(x => x.id === id); if (!b) return;
+    const b = state.batches.find(x => x.id === id); if (!b) return false;
     const names = [...new Set(db.txs.filter(t => t.ref === id && t.type === 'PACKET').map(t => t.item))].filter(n => state.map[n]);
-    if (!names.length) { toast('এই ব্যাচে আইটেম পাওয়া যায়নি'); return; }
+    if (!names.length) { toast('এই ব্যাচে আইটেম পাওয়া যায়নি'); return false; }
     bf.rows = {}; bf.only = names; bf.from = id;
     bf.packets = String(b.packets); bf.packaging = b.packagingCost ? String(b.packagingCost) : ''; bf.sell = b.sellingPrice ? String(b.sellingPrice) : ''; bf.sold = '';
-    saveDraft(); render();
+    saveDraft(); return true;
 }
 function sfShowAll() { bf.only = null; bf.from = ''; saveDraft(); render(); }
 function bfSet(i, list, field, val) {
@@ -868,13 +873,21 @@ function reconBox() {
 }
 function viewBatchList() {
     if (!state.batches.length) return '<p class="text-center text-gray-500 text-sm py-6">এখনো কোনো ব্যাচ সেভ হয়নি।</p>' + reconBox();
-    return reconBox() + `<div class="space-y-2.5 mb-4">${state.batches.slice().reverse().map((b, n) => {
+    const rawOf = id => db.batches.find(x => x.id === id) || {};
+    const all = state.batches.map((b, i) => ({ b, no: i + 1, pin: !!rawOf(b.id).pin })).reverse();
+    const ordered = all.filter(x => x.pin).concat(all.filter(x => !x.pin));
+    const pinN = all.filter(x => x.pin).length;
+    return reconBox() + `<div class="space-y-2.5 mb-4">${ordered.map((x, n) => {
+        const b = x.b, no = x.no, pin = x.pin;
+        const label = (pinN && n === 0) ? '<div class="text-[11px] font-bold text-amber-700"><i class="fa-solid fa-thumbtack mr-1"></i>পিন করা ব্যাচ</div>' : (pinN && n === pinN ? '<div class="text-[11px] font-bold text-gray-500 pt-1">অন্যান্য ব্যাচ</div>' : '');
         const open = !!ui.openBatch[b.id];
         const txs = db.txs.filter(t => t.ref === b.id && t.type !== 'ADJUST_IN' && t.type !== 'EXPENSE');
         const names = [...new Set(txs.map(t => t.item))];
-        return `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div onclick="ui.openBatch['${b.id}']=!ui.openBatch['${b.id}'];render()" class="p-2.5 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
-                <div><span class="text-[11px] font-bold text-gray-600 block">ব্যাচ #${state.batches.length - n} • ${esc(b.date)}</span>
+        return label + `<div class="bg-white border ${pin ? 'border-amber-300 ring-1 ring-amber-100' : 'border-gray-200'} rounded-xl shadow-sm overflow-hidden">
+            <div onclick="ui.openBatch['${b.id}']=!ui.openBatch['${b.id}'];render()" class="p-2.5 cursor-pointer hover:bg-gray-50 flex justify-between items-center gap-2">
+                <div class="min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><button onclick="event.stopPropagation();togglePin('${b.id}')" class="no-print -ml-0.5 px-1" title="পিন"><i class="fa-solid fa-thumbtack ${pin ? 'text-amber-500' : 'text-gray-300'}"></i></button>
+                        <span class="text-[11px] font-bold text-gray-700">ব্যাচ #${no}</span>${b.note ? `<span class="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 max-w-[52vw] truncate">${esc(b.note)}</span>` : ''}</div>
+                    <span class="text-[10px] text-gray-500 block">${esc(b.date)}</span>
                     <span class="text-xs text-gray-700">${fmt(b.packets, 0)} প্যাকেট${b.soldPackets < b.packets ? ' (বিক্রি ' + fmt(b.soldPackets, 0) + ')' : ''} • খরচ/প্যাকেট ${tk(b.costPerPacket)}</span></div>
                 <div class="text-right"><span class="font-extrabold ${profitCls(b.net)} block">${tk(b.net)}</span><i class="fa-solid fa-chevron-down text-gray-400 text-xs ${open ? 'rotate-180' : ''}"></i></div>
             </div>
@@ -900,6 +913,7 @@ function viewBatchList() {
                     <button onclick="openBatchEdit('${b.id}')" class="text-indigo-600 text-[11px] font-semibold"><i class="fa-solid fa-pen mr-1"></i>সম্পাদনা (বিক্রি/দাম/প্যাকেজিং)</button>
                     <button onclick="deleteGroup('${b.id}')" class="text-red-600 text-[11px] font-semibold"><i class="fa-solid fa-trash-can mr-1"></i>মুছুন (স্টক ফেরত আসবে)</button>
                 </div>
+                <button onclick="cloneBatch('${b.id}')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl py-2.5 text-xs no-print"><i class="fa-solid fa-clone mr-1.5"></i>এই আইটেমগুলো দিয়ে নতুন ব্যাচ তৈরি করুন</button>
             </div>` : ''}
         </div>`;
     }).join('')}</div>`;
