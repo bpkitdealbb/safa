@@ -1,11 +1,12 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafaBoxBD - লাইফটাইম ইনভেন্টরি লেজার</title>
+    <title>স্টক ও লাভের লেজার</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 48 48%27%3E%3Crect width=%2748%27 height=%2748%27 rx=%2710%27 fill=%27%23059669%27/%3E%3Crect x=%278%27 y=%274%27 width=%2732%27 height=%2740%27 rx=%276%27 fill=%27%23fff%27/%3E%3Crect x=%2714%27 y=%2710%27 width=%2714%27 height=%274%27 rx=%272%27 fill=%27%2310b981%27/%3E%3Crect x=%2714%27 y=%2730%27 width=%275%27 height=%279%27 rx=%271.5%27 fill=%27%2310b981%27/%3E%3Crect x=%2721.5%27 y=%2725%27 width=%275%27 height=%2714%27 rx=%271.5%27 fill=%27%23f59e0b%27/%3E%3Crect x=%2729%27 y=%2721%27 width=%275%27 height=%2718%27 rx=%271.5%27 fill=%27%230d9488%27/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,9 +20,10 @@
 <body class="pb-24">
 <div id="login-screen" class="hidden fixed inset-0 z-[100] bg-gray-50 overflow-y-auto">
   <div class="min-h-full flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
-    <div class="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-3xl mb-3"><i class="fa-solid fa-boxes-stacked"></i></div>
-    <h1 class="text-xl font-extrabold text-gray-800">SafaBoxBD লেজার</h1>
+    <div id="login-logo" class="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center mb-3 overflow-hidden p-2"><svg viewBox="0 0 48 48" class="w-full h-full" aria-hidden="true"><rect x="8" y="4" width="32" height="40" rx="6" fill="#ffffff"/><rect x="14" y="10" width="14" height="3.5" rx="1.75" fill="#10b981"/><rect x="14" y="17" width="20" height="2.5" rx="1.25" fill="#d1d5db"/><rect x="14" y="30" width="5" height="9" rx="1.5" fill="#10b981"/><rect x="21.5" y="25" width="5" height="14" rx="1.5" fill="#f59e0b"/><rect x="29" y="21" width="5" height="18" rx="1.5" fill="#0d9488"/></svg></div>
+    <h1 id="login-name" class="text-xl font-extrabold text-gray-800">আপনার প্রতিষ্ঠানের নাম</h1>
     <p class="text-sm text-gray-500 mb-6">লাইফটাইম স্টক, গড় দাম ও লাভের হিসাব</p>
+    <div id="login-warn" class="hidden w-full mb-4 bg-amber-50 border border-amber-300 text-amber-900 text-xs rounded-xl p-3 text-left"><b><i class="fa-solid fa-triangle-exclamation mr-1"></i>আপনি অ্যাপের ভেতরের ব্রাউজারে আছেন (যেমন ফেসবুক/মেসেঞ্জার)।</b><p class="mt-1">এখানে Google লগইন আটকে যেতে পারে। ওপরের তিন-ডট (⋮) মেনু থেকে <b>"Chrome/ব্রাউজারে খুলুন"</b> চাপুন, অথবা লিংক কপি করে Chrome-এ খুলুন।</p><button onclick="copyAppLink()" class="mt-2 bg-amber-600 text-white font-bold rounded-lg px-3 py-1.5"><i class="fa-solid fa-copy mr-1"></i>লিংক কপি করুন</button></div>
     <div id="login-main" class="w-full">
       <button onclick="doLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-3 shadow"><i class="fa-brands fa-google mr-2"></i>Google দিয়ে লগইন</button>
       <a href="?demo=1" class="block mt-4 text-sm text-emerald-700 underline">লগইন ছাড়া ডেমো দেখুন</a>
@@ -32,6 +34,7 @@
       <button onclick="saveFbConfig()" class="w-full mt-2 bg-emerald-600 text-white font-bold rounded-xl py-2.5">সেভ করুন</button>
     </div>
     <p id="login-msg" class="text-sm text-red-600 mt-4 whitespace-pre-wrap"></p>
+    <p class="text-[11px] text-gray-500 mt-5"><a href="legal.html#terms" target="_blank" class="underline">শর্তাবলি</a> • <a href="legal.html#privacy" target="_blank" class="underline">প্রাইভেসি পলিসি</a> • <a href="legal.html#refund" target="_blank" class="underline">রিফান্ড নীতি</a></p>
   </div>
 </div>
 
@@ -39,9 +42,9 @@
 <header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white sticky top-0 z-40 shadow-md no-print">
     <div class="max-w-2xl mx-auto px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
-            <i class="fa-solid fa-boxes-packing text-2xl text-amber-300"></i>
+            <span id="brand-icon"><svg viewBox="0 0 48 48" class="w-9 h-9" aria-hidden="true"><rect x="8" y="4" width="32" height="40" rx="6" fill="#ffffff"/><rect x="14" y="10" width="14" height="3.5" rx="1.75" fill="#10b981"/><rect x="14" y="17" width="20" height="2.5" rx="1.25" fill="#d1d5db"/><rect x="14" y="30" width="5" height="9" rx="1.5" fill="#10b981"/><rect x="21.5" y="25" width="5" height="14" rx="1.5" fill="#f59e0b"/><rect x="29" y="21" width="5" height="18" rx="1.5" fill="#0d9488"/></svg></span>
             <div>
-                <h1 class="text-lg font-bold leading-tight">SafaBoxBD লেজার</h1>
+                <h1 id="brand-name" class="text-lg font-bold leading-tight">আপনার প্রতিষ্ঠানের নাম</h1>
                 <p class="text-xs text-emerald-100">লাইফটাইম স্টক, গড় দাম ও লাভ</p>
             </div>
         </div>
@@ -267,23 +270,19 @@ const SUPPORT_WHATSAPP = '8801614962727';      // মেয়াদ শেষ�
 const TRIAL_DAYS = 7;
 let acc = { known: false, ok: true, plan: '', untilMs: 0 };
 
-const DEFAULT_ITEMS = [
-    ['কাঠবাদাম', 1320], ['কাজুবাদাম', 1380], ['আখরোট', 1000], ['চীনাবাদাম', 320], ['কিসমিস', 870],
-    ['কুমড়ো বীজ', 800], ['সূর্যমুখী বীজ', 250], ['সাদা তিল', 235], ['খুরমা', 240], ['কালো জিরা', 500]
-];
 const TYPE_LABEL = { OPENING: 'শুরুর স্টক', RESTOCK: 'রিস্টক', PACKET: 'প্যাকেট', BULK: 'বাল্ক বিক্রি', EAT: 'খাওয়া/ঘাটতি', BLEND_OUT: 'ব্লেন্ডে ব্যবহার', BLEND_IN: 'ব্লেন্ড তৈরি', ADJUST_IN: 'ওজন সংশোধন (বেশি)', EXPENSE: 'অন্যান্য খরচ' };
 const TYPE_COLOR = { OPENING: 'bg-sky-100 text-sky-800', RESTOCK: 'bg-sky-100 text-sky-800', PACKET: 'bg-emerald-100 text-emerald-800', BULK: 'bg-blue-100 text-blue-800', EAT: 'bg-rose-100 text-rose-800', BLEND_OUT: 'bg-purple-100 text-purple-800', BLEND_IN: 'bg-purple-100 text-purple-800', ADJUST_IN: 'bg-amber-100 text-amber-800', EXPENSE: 'bg-orange-100 text-orange-800' };
 
 function loadDb() {
     try {
         const d = JSON.parse(localStorage.getItem(LS_KEY));
-        if (d && Array.isArray(d.txs)) return { txs: d.txs, batches: d.batches || [], pendingDeleteTx: d.pendingDeleteTx || [], pendingDeleteBatch: d.pendingDeleteBatch || [], running: d.running || null, runningDirty: !!d.runningDirty, bkMap: d.bkMap || {}, prices: d.prices || {}, pricesDirty: !!d.pricesDirty };
+        if (d && Array.isArray(d.txs)) return { txs: d.txs, batches: d.batches || [], pendingDeleteTx: d.pendingDeleteTx || [], pendingDeleteBatch: d.pendingDeleteBatch || [], running: d.running || null, runningDirty: !!d.runningDirty, bkMap: d.bkMap || {}, prices: d.prices || {}, pricesDirty: !!d.pricesDirty, brand: d.brand || {}, brandDirty: !!d.brandDirty };
     } catch (e) {}
-    return { txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false };
+    return { txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false, brand: {}, brandDirty: false };
 }
 let db = loadDb();
 let state = compute(db.txs, db.batches);
-let ui = { tab: 'home', ledgerTab: 'batches', stockSort: 'cost', expanded: {}, openBatch: {}, txItem: '', txType: '', txQ: '', txView: 'table', alloc: (function () { try { const v = localStorage.getItem('sbx_alloc'); return v === 'weight' || v === 'price' ? v : 'cost'; } catch (e) { return 'cost'; } })(), itemOpen: {}, txLimit: 60, bfOpen: {} };
+let ui = { tab: 'home', ledgerTab: 'batches', stockSort: 'cost', expanded: {}, openBatch: {}, txItem: '', txType: '', txQ: '', txView: 'table', rep: { p: 'month', from: '', to: '' }, alloc: (function () { try { const v = localStorage.getItem('sbx_alloc'); return v === 'weight' || v === 'price' ? v : 'cost'; } catch (e) { return 'cost'; } })(), itemOpen: {}, txLimit: 60, bfOpen: {} };
 
 function persist() { try { ensureBk(); localStorage.setItem(LS_KEY, JSON.stringify(db)); } catch (e) {} }
 function recompute() { state = compute(db.txs, db.batches); }
@@ -312,7 +311,7 @@ function makeTx(type, item, grams, pricePerKg, amountTk, ref, note, ts) {
 // ---------- নেভিগেশন ও রেন্ডার ----------
 function goTab(t) { ui.tab = t; render(); window.scrollTo(0, 0); }
 function render() {
-    updateBadge();
+    updateBadge(); applyBrand();
     ['home', 'stock', 'batch', 'ledger'].forEach(t => {
         const b = el('nav-' + t);
         b.className = 'py-2.5 flex flex-col items-center gap-0.5 ' + (ui.tab === t ? 'text-emerald-700' : 'text-gray-500');
@@ -338,6 +337,7 @@ function viewHome() {
     const low = state.items.filter(i => i.stock < 200);
     return `
     ${state.negatives.length ? `<div class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-2.5 mb-3"><i class="fa-solid fa-triangle-exclamation mr-1"></i>সতর্কতা: ${esc([...new Set(state.negatives.map(n => n.item))].join(', '))} এর স্টক মাইনাসে গেছে। লেজার থেকে ভুল এন্ট্রি ঠিক করুন।</div>` : ''}
+    ${brandHint()}
     ${db.running ? `<button onclick="goTab('batch')" class="w-full text-left bg-amber-50 border border-amber-300 text-amber-900 text-xs rounded-xl p-2.5 mb-3"><i class="fa-solid fa-hourglass-half mr-1"></i><b>একটি ব্যাচ চলছে</b> (শুরু: ${esc(db.running.date)}). প্যাকেট শেষ হলে এখানে চেপে শেষের ওজন দিন।</button>` : ''}
     ${T.adjG > Math.max(100, T.boughtG * 0.02) ? `<div class="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-2.5 mb-3"><i class="fa-solid fa-scale-unbalanced mr-1"></i>মাপায় লেজারের চেয়ে মোট <b>${fg(T.adjG)}</b> বেশি পাওয়া গেছে। আগের কোনো এন্ট্রি বা স্কেল যাচাই করুন।</div>` : ''}
     <div class="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm bg-gradient-to-r from-emerald-50/60 to-teal-50/60 mb-3">
@@ -408,6 +408,8 @@ function viewHome() {
             <button onclick="window.print()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-print mr-1"></i>প্রিন্ট / PDF</button>
             <button onclick="doLogout()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-right-from-bracket mr-1"></i>লগআউট</button>
             <button onclick="importLegacy(true)" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>পুরোনো ডাটা তুলুন</button>
+            <a href="legal.html" target="_blank" class="col-span-2 bg-gray-100 hover:bg-gray-200 border rounded-lg py-2 text-center"><i class="fa-solid fa-scale-balanced mr-1"></i>শর্তাবলি, প্রাইভেসি ও রিফান্ড নীতি</a>
+            <button onclick="openBrand()" class="col-span-2 bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-palette mr-1"></i>প্রতিষ্ঠানের নাম ও লোগো</button>
             ${isAdminUser() ? '<button onclick="openAdmin()" class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2"><i class="fa-solid fa-user-shield mr-1"></i>অ্যাডমিন: সাবস্ক্রিপশন ও অনুমোদন</button>' : ''}
             <button onclick="clearLocal()" class="col-span-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg py-2"><i class="fa-solid fa-rotate mr-1"></i>এই ফোনের কপি মুছে ক্লাউড থেকে নতুন করে লোড (ক্লাউডের ডাটা মুছবে না)</button>
         </div>
@@ -424,11 +426,11 @@ function qa(icon, color, label, fn) {
 function row2(l, v, cls) { return `<div class="flex justify-between ${cls || ''}"><span>${l}</span><span class="font-bold">${v}</span></div>`; }
 
 // ---------- শুরুর স্টক (অনবোর্ডিং) ----------
-let ob = DEFAULT_ITEMS.map(x => ({ name: x[0], g: '1000', p: String(x[1]) }));
+let ob = [{ name: '', g: '', p: '' }, { name: '', g: '', p: '' }, { name: '', g: '', p: '' }];
 function viewOnboarding() {
     return `<div class="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm mb-4">
         <h2 class="text-sm font-bold text-gray-800 mb-1"><i class="fa-solid fa-flag-checkered text-emerald-600 mr-1.5"></i>শুরুর স্টক বসান</h2>
-        <p class="text-xs text-gray-500 mb-3">এখন আপনার কাছে প্রতিটি আইটেম কত গ্রাম আছে এবং কেজি প্রতি কত টাকায় কিনেছেন, সেটা একবার বসান। এরপর থেকে সব হিসাব এই লেজারে জমা হবে। যে আইটেম নেই, তার গ্রাম ০ রাখুন বা মুছে দিন।</p>
+        <p class="text-xs text-gray-500 mb-3">এখন আপনার কাছে প্রতিটি আইটেম কত গ্রাম আছে এবং কেজি প্রতি কত টাকায় কিনেছেন, সেটা একবার বসান। এরপর থেকে সব হিসাব এই লেজারে জমা হবে। নিজের আইটেমের নাম লিখুন (যেমন: কাজুবাদাম), আরও লাগলে "আরেকটি আইটেম" চাপুন। যে ঘর লাগবে না তা মুছে দিন।</p>
         <div class="grid grid-cols-12 gap-1.5 text-[10px] text-gray-500 font-bold mb-1 px-0.5"><span class="col-span-5">আইটেম</span><span class="col-span-3 text-center">গ্রাম</span><span class="col-span-3 text-center">কেজি দর ৳</span><span></span></div>
         <div id="ob-rows"></div>
         <button onclick="obAdd()" class="text-xs text-emerald-700 font-bold mt-1"><i class="fa-solid fa-plus-circle mr-1"></i>আরেকটি আইটেম</button>
@@ -438,9 +440,9 @@ function viewOnboarding() {
 function obRender() {
     const c = el('ob-rows'); if (!c) return;
     c.innerHTML = ob.map((r, i) => `<div class="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
-        <input class="col-span-5 ${INP_L} !p-1.5 !text-xs" value="${esc(r.name)}" oninput="ob[${i}].name=this.value">
-        <input type="number" inputmode="decimal" class="col-span-3 ${INP} !p-1.5 !text-xs" value="${esc(r.g)}" oninput="ob[${i}].g=this.value">
-        <input type="number" inputmode="decimal" class="col-span-3 ${INP} !p-1.5 !text-xs" value="${esc(r.p)}" oninput="ob[${i}].p=this.value">
+        <input class="col-span-5 ${INP_L} !p-1.5 !text-xs" value="${esc(r.name)}" placeholder="আইটেমের নাম" oninput="ob[${i}].name=this.value">
+        <input type="number" inputmode="decimal" class="col-span-3 ${INP} !p-1.5 !text-xs" value="${esc(r.g)}" placeholder="গ্রাম" oninput="ob[${i}].g=this.value">
+        <input type="number" inputmode="decimal" class="col-span-3 ${INP} !p-1.5 !text-xs" value="${esc(r.p)}" placeholder="৳/কেজি" oninput="ob[${i}].p=this.value">
         <button onclick="obDel(${i})" class="text-red-400 text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
 }
 function obAdd() { ob.push({ name: '', g: '', p: '' }); obRender(); }
@@ -539,6 +541,36 @@ function saveDraft() { try { localStorage.setItem(LS_DRAFT, JSON.stringify(bf));
 function bfReset() { bf = { v: 2, packets: '', packaging: '', sell: '', sold: '', other: '', note: '', rows: {} }; saveDraft(); }
 const EPS = 0.01;
 function batchPreview() { if (db.running) ffPreview(); else sfPreview(); }
+// ---------- আগের ব্যাচের আইটেম নিয়ে নতুন ব্যাচ ----------
+function sfFromBatchPanel() {
+    if (!bf.only) return '';
+    const i = state.batches.findIndex(x => x.id === bf.from), b = i >= 0 ? state.batches[i] : null;
+    return `<div class="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-3 text-xs flex justify-between items-center gap-2">
+        <span class="text-purple-900"><i class="fa-solid fa-clone mr-1"></i>${b ? 'ব্যাচ #' + (i + 1) + ' (' + esc(String(b.date).slice(0, 10)) + ') এর ' : ''}<b>${bf.only.length}টি আইটেম</b> নিয়ে শুরু হচ্ছে। প্যাকেট সংখ্যা, প্যাকেজিং ও বিক্রি মূল্যও আগের ব্যাচ থেকে বসেছে।</span>
+        <button onclick="sfShowAll()" class="underline text-purple-700 font-bold whitespace-nowrap">সব আইটেম দেখান</button></div>`;
+}
+// ব্যাচ কার্ডের বাটন থেকে: ওই ব্যাচের আইটেম দিয়ে নতুন ব্যাচ শুরুর ফর্ম
+function cloneBatch(id) {
+    if (db.running) { toast('আগে চলমান ব্যাচটি শেষ করুন'); goTab('batch'); return; }
+    if (!sfFromBatch(id)) return;
+    goTab('batch'); window.scrollTo(0, 0);
+}
+// ব্যাচ পিন/আনপিন
+function togglePin(id) {
+    if (!canWrite()) return;
+    const b = db.batches.find(x => x.id === id); if (!b) return;
+    b.pin = !b.pin; b.synced = false;
+    refresh();
+}
+function sfFromBatch(id) {
+    const b = state.batches.find(x => x.id === id); if (!b) return false;
+    const names = [...new Set(db.txs.filter(t => t.ref === id && t.type === 'PACKET').map(t => t.item))].filter(n => state.map[n]);
+    if (!names.length) { toast('এই ব্যাচে আইটেম পাওয়া যায়নি'); return false; }
+    bf.rows = {}; bf.only = names; bf.from = id;
+    bf.packets = String(b.packets); bf.packaging = b.packagingCost ? String(b.packagingCost) : ''; bf.sell = b.sellingPrice ? String(b.sellingPrice) : ''; bf.sold = '';
+    saveDraft(); return true;
+}
+function sfShowAll() { bf.only = null; bf.from = ''; saveDraft(); render(); }
 function bfSet(i, list, field, val) {
     const it = list[i];
     const r = bf.rows[it.name] || (bf.rows[it.name] = {});
@@ -552,13 +584,13 @@ function viewBatch() {
 
 // ===== ধাপ ১: প্যাকেট শুরুর আগে ওজন =====
 function viewBatchStart() {
-    return `
+    return sfFromBatchPanel() + `
     <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 mb-3 text-xs text-sky-900">
         <b><i class="fa-solid fa-1 mr-1"></i>ধাপ ১ / ২: প্যাকেট শুরুর আগে ওজন মাপুন</b>
         <p class="mt-1 text-sky-800">যে আইটেম প্যাকেটে ব্যবহার করবেন শুধু সেগুলোর ওজন লিখুন (লেজারের স্টকই ঠিক থাকলে "লেজারের স্টক বসান" বাটন চাপুন), বাকি ঘর ফাঁকা রাখুন। লেজারের চেয়ে কম হলে ঘাটতি/খাওয়া ধরা হবে। বেশি হলে স্টক ঠিক করা হবে, লাভে প্রভাব পড়বে না।</p>
     </div>
     <button onclick="sfAutoAll()" class="w-full mb-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold py-2 rounded-xl"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>সব আইটেমের লেজারের স্টক একসাথে বসান / তুলে নিন</button>
-    <div class="space-y-2.5" id="sf-items">${state.items.map(sfItem).join('')}</div>
+    <div class="space-y-2.5" id="sf-items">${state.items.map((it, i) => (!bf.only || bf.only.includes(it.name)) ? sfItem(it, i) : '').join('')}</div>
     <input type="text" value="${esc(bf.note)}" oninput="bf.note=this.value;saveDraft()" class="${INP_L} mt-3 !text-xs" placeholder="ব্যাচের নোট (ইচ্ছাধীন)">
     <div class="bg-gray-800 text-white p-4 rounded-xl shadow-lg mt-3 mb-3">
         <h3 class="text-sm font-bold text-amber-400 mb-2 border-b border-gray-700 pb-1">শুরুর হিসাব (প্রিভিউ)</h3>
@@ -615,7 +647,7 @@ function sfAuto(i) {
     sfPreview();
 }
 function sfAutoAll() {
-    const all = state.items.filter(it => it.stock > EPS);
+    const all = state.items.filter(it => it.stock > EPS && (!bf.only || bf.only.includes(it.name)));
     const allOn = all.length > 0 && all.every(it => (bf.rows[it.name] || {}).auto);
     all.forEach(it => {
         const r = bf.rows[it.name] || (bf.rows[it.name] = {});
@@ -672,15 +704,16 @@ function sfSave() { if (!canWrite()) return;
     if (!confirm(`ব্যাচ শুরু করবেন?\n${c.rows.length}টি আইটেম মাপা হয়েছে\nখাওয়া/ঘাটতি খরচ: ${tk(c.eatCost)}${big.length ? '\n\n⚠ বড় ঘাটতি (১০%+): ' + big.join(', ') + ', মাপ ঠিক আছে তো?' : ''}\n\nস্টক মাপা ওজন অনুযায়ী ঠিক হয়ে যাবে।`)) return;
     const now = Date.now(), bid = uid('b_');
     let k = 1;
-    const items = {};
+    const items = {}, mm = {}, pushS = t => { t.grp = 's'; db.txs.push(t); };   // grp 's' = ব্যাচ শুরুর ওজন-সংশোধন, পরে সম্পাদনায় লাগে
     c.rows.forEach(r => {
         items[r.name] = r.meas;
-        if (r.soldG > 0) db.txs.push(makeTx('BULK', r.name, r.soldG, 0, r.soldTk, bid, 'ব্যাচের আগে কম পাওয়া অংশ থেকে বিক্রি', now + (k++)));
-        if (r.eatG > EPS) db.txs.push(makeTx('EAT', r.name, r.eatG, 0, r.cEat, bid, 'অটো ঘাটতি (ব্যাচের আগে ওজন মেপে)', now + (k++)));
-        if (r.gain > EPS) db.txs.push(makeTx('ADJUST_IN', r.name, r.gain, 0, 0, bid, 'মাপা ওজন বেশি, স্টক সংশোধন', now + (k++)));
+        mm[r.name] = { before: round(r.meas + r.short - r.gain, 3), start: r.meas, soldG: r.soldG || 0, soldTk: r.soldTk || 0 };
+        if (r.soldG > 0) pushS(makeTx('BULK', r.name, r.soldG, 0, r.soldTk, bid, 'ব্যাচের আগে কম পাওয়া অংশ থেকে বিক্রি', now + (k++)));
+        if (r.eatG > EPS) pushS(makeTx('EAT', r.name, r.eatG, 0, r.cEat, bid, 'অটো ঘাটতি (ব্যাচের আগে ওজন মেপে)', now + (k++)));
+        if (r.gain > EPS) pushS(makeTx('ADJUST_IN', r.name, r.gain, 0, 0, bid, 'মাপা ওজন বেশি, স্টক সংশোধন', now + (k++)));
     });
-    db.running = { id: bid, ts: now, date: dateStr(now), items }; db.runningDirty = true;
-    const note = bf.note; bfReset(); bf.note = note; saveDraft();
+    db.running = { id: bid, ts: now, date: dateStr(now), items, m: mm }; db.runningDirty = true;
+    const keep = { note: bf.note, packets: bf.packets, packaging: bf.packaging, sell: bf.sell }; bfReset(); Object.assign(bf, keep); saveDraft();
     refresh(); window.scrollTo(0, 0); toast('ব্যাচ শুরু হয়েছে, এবার প্যাকেট করুন');
 }
 
@@ -692,6 +725,11 @@ function viewBatchFinish() {
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-xs text-amber-900">
         <b><i class="fa-solid fa-2 mr-1"></i>ধাপ ২ / ২: প্যাকেট শেষ, এবার আবার ওজন মাপুন</b>
         <p class="mt-1 text-amber-800">ব্যাচ শুরু: ${esc(run.date)}। প্রতিটি আইটেমের এখনকার ওজন লিখুন। শুরুর স্টক − শেষের ওজন = প্যাকেটে খরচ।</p>
+        <div class="mt-2 bg-purple-50 border border-purple-200 rounded-lg p-2 text-purple-900 no-print">
+            <b>ব্যাচ চলার মাঝে ব্লেন্ড বা কোনো আইটেম শেষ হয়ে গেলে?</b>
+            <p class="mt-0.5 text-purple-800">এখনই নতুন ব্লেন্ড বানান (বা কিনে রিস্টক করুন), তারপর প্যাকেট চালিয়ে যান। সিস্টেম নিজে হিসাব রাখবে: শেষে শুধু শেষের মাপা ওজন দিন। যা যোগ হয়েছে তা প্রতিটি আইটেমের নিচে "শুরুর পর ... যোগ হয়েছে" লেখায় দেখাবে।</p>
+            <button onclick="openBlend()" class="mt-1.5 bg-purple-600 text-white font-bold rounded-lg px-3 py-1.5"><i class="fa-solid fa-blender mr-1"></i>ব্লেন্ড বানান / বাড়ান</button>
+        </div>
         <div class="flex gap-3 mt-2 no-print">
             <button onclick="runCancel(false)" class="text-[11px] font-semibold text-gray-700 underline">ব্যাচ বাতিল (ঘাটতিগুলো থাকবে)</button>
             <button onclick="runCancel(true)" class="text-[11px] font-semibold text-red-600 underline">বাতিল ও শুরুর সব এন্ট্রি মুছুন</button>
@@ -725,7 +763,8 @@ function ffItem(it, i) {
     return `<div class="rounded-xl border shadow-sm p-3 ${it.isMixed ? 'bg-purple-50/40 border-purple-200' : 'bg-white border-gray-200'}">
         <div class="flex items-center justify-between gap-2">
             <div><span class="font-bold text-gray-800 text-sm">${esc(it.name)}</span>${it.isMixed ? ' <span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">মিক্সড</span>' : ''}
-                <span class="text-[11px] text-gray-500 block">শুরুতে মাপা: <b>${fg(startMeas)}</b> • এখন লেজারে: <b class="text-amber-800">${fg(it.stock)}</b> • গড় ৳${fmt(it.avg)}</span></div>
+                <span class="text-[11px] text-gray-500 block">শুরুতে মাপা: <b>${fg(startMeas)}</b> • এখন লেজারে: <b class="text-amber-800">${fg(it.stock)}</b> • গড় ৳${fmt(it.avg)}</span>
+                ${Math.abs(it.stock - startMeas) > 0.5 ? `<span class="text-[10px] text-purple-700 block">শুরুর পর ${it.stock > startMeas ? '+' : ''}${fmt(it.stock - startMeas, 0)} g ${it.stock > startMeas ? 'যোগ হয়েছে (নতুন ব্লেন্ড/কেনা)' : 'কমেছে'}, হিসাবে ধরা আছে</span>` : ''}</div>
             <div class="w-28 shrink-0"><label class="block text-[10px] text-gray-600 text-center">শেষের ওজন (g)</label>
                 <input type="number" inputmode="decimal" step="any" value="${esc(r.end === undefined ? '' : r.end)}" oninput="ffRow(${i},this.value)" class="${INP} !p-1.5 !text-xs text-amber-900" placeholder="খালি = ব্যবহার হয়নি"></div>
         </div>
@@ -792,10 +831,21 @@ function ffSave() { if (!canWrite()) return;
     if (!c.rows.some(r => r.used > EPS)) { alert('কোনো আইটেমই কমেনি, শেষের ওজন আবার দেখুন'); return; }
     if (!confirm(`ব্যাচ শেষ করে সেভ করবেন?\n${fmt(c.P, 0)} প্যাকেট • প্যাকেট প্রতি খরচ ${tk(c.cpp)}\nনিট লাভ ${tk(c.net)}\n\nস্টক শেষের ওজন অনুযায়ী কমবে।`)) return;
     const now = Date.now();
-    db.batches.push({ id: run.id, ts: run.ts, date: run.date, packets: c.P, soldPackets: c.sold, packagingCost: c.pkg, sellingPrice: c.sell, note: bf.note || '', sp: Object.assign({}, db.prices || {}), synced: false,
+    let finMeas;   // প্রতি আইটেমের শুরুর ও শেষের মাপা ওজন (পরে ভুল হলে ঠিক করার জন্য)
+    if (run.m) {
+        finMeas = {};
+        Object.keys(run.m).forEach(n => { finMeas[n] = Object.assign({}, run.m[n], { end: null }); });
+        c.rows.forEach(r => {
+            const m = finMeas[r.name]; if (!m) return;
+            m.end = r.end;
+            const add = round(r.used + r.end - m.start, 3);   // শুরুর পর ব্যাচ চলাকালে স্টকে যা যোগ/বাদ হয়েছে (যেমন নতুন ব্লেন্ড, রিস্টক)
+            m.added = Math.abs(add) < 0.001 ? 0 : add;
+        });
+    }
+    db.batches.push({ id: run.id, ts: run.ts, date: run.date, packets: c.P, soldPackets: c.sold, packagingCost: c.pkg, sellingPrice: c.sell, note: bf.note || '', sp: Object.assign({}, db.prices || {}), meas: finMeas, synced: false,
         snap: { packetCost: round(c.totalPacketCost, 2), bulkRevenue: round(c.bulkRev, 2), bulkCost: round(c.bulkCost, 2), eatCost: round(c.eat, 2), otherCost: round(c.exp, 2), netProfit: round(c.net, 2), margin: round(c.margin, 2) } });
     let k = 1;
-    c.rows.forEach(r => { if (r.used > EPS) db.txs.push(makeTx('PACKET', r.name, r.used, 0, r.cost, run.id, '', now + (k++))); });
+    c.rows.forEach(r => { if (r.used > EPS) { const pt = makeTx('PACKET', r.name, r.used, 0, r.cost, run.id, '', now + (k++)); pt.grp = 'p'; db.txs.push(pt); } });
     if (c.other > 0) db.txs.push(makeTx('EXPENSE', 'অন্যান্য খরচ', 0, 0, c.other, run.id, 'ব্যাচের অন্যান্য খরচ', now + (k++)));
     db.running = null; db.runningDirty = true; bfReset();
     ui.tab = 'home'; refresh(); window.scrollTo(0, 0); toast('ব্যাচ সেভ হয়েছে');
@@ -811,10 +861,11 @@ function runCancel(all) { if (!canWrite()) return;
 function viewLedger() {
     if (!db.txs.length) return viewOnboarding();
     const tabs = `<div class="flex gap-1.5 mb-3 text-xs font-semibold">
-        <button onclick="ui.ledgerTab='batches';render()" class="flex-1 py-2 rounded-lg border ${ui.ledgerTab === 'batches' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">ব্যাচ (${state.batches.length})</button>
-        <button onclick="ui.ledgerTab='items';render()" class="flex-1 py-2 rounded-lg border ${ui.ledgerTab === 'items' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">আইটেম লাভ</button>
-        <button onclick="ui.ledgerTab='txs';render()" class="flex-1 py-2 rounded-lg border ${ui.ledgerTab === 'txs' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">সব লেনদেন (${db.txs.length})</button></div>`;
-    return tabs + (ui.ledgerTab === 'batches' ? viewBatchList() : ui.ledgerTab === 'items' ? viewItemProfit() : viewTxList());
+        <button onclick="ui.ledgerTab='batches';render()" class="flex-1 whitespace-nowrap px-1.5 py-2 rounded-lg border ${ui.ledgerTab === 'batches' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">ব্যাচ (${state.batches.length})</button>
+        <button onclick="ui.ledgerTab='report';render()" class="flex-1 whitespace-nowrap px-1.5 py-2 rounded-lg border ${ui.ledgerTab === 'report' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">রিপোর্ট</button>
+        <button onclick="ui.ledgerTab='items';render()" class="flex-1 whitespace-nowrap px-1.5 py-2 rounded-lg border ${ui.ledgerTab === 'items' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">আইটেম লাভ</button>
+        <button onclick="ui.ledgerTab='txs';render()" class="flex-1 whitespace-nowrap px-1.5 py-2 rounded-lg border ${ui.ledgerTab === 'txs' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600'}">সব লেনদেন (${db.txs.length})</button></div>`;
+    return tabs + (ui.ledgerTab === 'batches' ? viewBatchList() : ui.ledgerTab === 'items' ? viewItemProfit() : ui.ledgerTab === 'report' ? viewReport() : viewTxList());
 }
 function reconBox() {
     const T = state.totals, sum = state.batches.reduce((s, b) => s + b.net, 0), other = T.profit - sum;
@@ -825,13 +876,21 @@ function reconBox() {
 }
 function viewBatchList() {
     if (!state.batches.length) return '<p class="text-center text-gray-500 text-sm py-6">এখনো কোনো ব্যাচ সেভ হয়নি।</p>' + reconBox();
-    return reconBox() + `<div class="space-y-2.5 mb-4">${state.batches.slice().reverse().map((b, n) => {
+    const rawOf = id => db.batches.find(x => x.id === id) || {};
+    const all = state.batches.map((b, i) => ({ b, no: i + 1, pin: !!rawOf(b.id).pin })).reverse();
+    const ordered = all.filter(x => x.pin).concat(all.filter(x => !x.pin));
+    const pinN = all.filter(x => x.pin).length;
+    return reconBox() + `<div class="space-y-2.5 mb-4">${ordered.map((x, n) => {
+        const b = x.b, no = x.no, pin = x.pin;
+        const label = (pinN && n === 0) ? '<div class="text-[11px] font-bold text-amber-700"><i class="fa-solid fa-thumbtack mr-1"></i>পিন করা ব্যাচ</div>' : (pinN && n === pinN ? '<div class="text-[11px] font-bold text-gray-500 pt-1">অন্যান্য ব্যাচ</div>' : '');
         const open = !!ui.openBatch[b.id];
         const txs = db.txs.filter(t => t.ref === b.id && t.type !== 'ADJUST_IN' && t.type !== 'EXPENSE');
         const names = [...new Set(txs.map(t => t.item))];
-        return `<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div onclick="ui.openBatch['${b.id}']=!ui.openBatch['${b.id}'];render()" class="p-2.5 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
-                <div><span class="text-[11px] font-bold text-gray-600 block">ব্যাচ #${state.batches.length - n} • ${esc(b.date)}</span>
+        return label + `<div class="bg-white border ${pin ? 'border-amber-300 ring-1 ring-amber-100' : 'border-gray-200'} rounded-xl shadow-sm overflow-hidden">
+            <div onclick="ui.openBatch['${b.id}']=!ui.openBatch['${b.id}'];render()" class="p-2.5 cursor-pointer hover:bg-gray-50 flex justify-between items-center gap-2">
+                <div class="min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><button onclick="event.stopPropagation();togglePin('${b.id}')" class="no-print -ml-0.5 px-1" title="পিন"><i class="fa-solid fa-thumbtack ${pin ? 'text-amber-500' : 'text-gray-300'}"></i></button>
+                        <span class="text-[11px] font-bold text-gray-700">ব্যাচ #${no}</span>${b.note ? `<span class="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 max-w-[52vw] truncate">${esc(b.note)}</span>` : ''}</div>
+                    <span class="text-[10px] text-gray-500 block">${esc(b.date)}</span>
                     <span class="text-xs text-gray-700">${fmt(b.packets, 0)} প্যাকেট${b.soldPackets < b.packets ? ' (বিক্রি ' + fmt(b.soldPackets, 0) + ')' : ''} • খরচ/প্যাকেট ${tk(b.costPerPacket)}</span></div>
                 <div class="text-right"><span class="font-extrabold ${profitCls(b.net)} block">${tk(b.net)}</span><i class="fa-solid fa-chevron-down text-gray-400 text-xs ${open ? 'rotate-180' : ''}"></i></div>
             </div>
@@ -851,10 +910,13 @@ function viewBatchList() {
                     return `<div class="border-b border-dashed border-gray-100 py-1"><div class="font-semibold text-gray-800">• ${esc(n)}</div>
                         <div class="text-[10px] text-gray-500 pl-2">${p.length ? `প্যাকেটে ${fg(sum(p, t => t.grams))} (${tk(sum(p, t => state.costOf[t.id]))}) | ` : ''}${bk.length ? `বাল্ক ${fg(sum(bk, t => t.grams))} (আয় ${tk(sum(bk, t => t.amountTk))}) | ` : ''}${e.length ? `<span class="text-rose-600">ঘাটতি ${fg(sum(e, t => t.grams))} (${tk(sum(e, t => state.costOf[t.id]))})</span>` : ''}</div></div>`;
                 }).join('')}</div>
+                ${batchIngredients(b)}
                 <div class="flex gap-4 no-print">
+                    <button onclick="openPlan('${b.id}')" class="text-purple-700 text-[11px] font-semibold"><i class="fa-solid fa-calculator mr-1"></i>এই রেসিপিতে কতটি বানানো যাবে</button>
                     <button onclick="openBatchEdit('${b.id}')" class="text-indigo-600 text-[11px] font-semibold"><i class="fa-solid fa-pen mr-1"></i>সম্পাদনা (বিক্রি/দাম/প্যাকেজিং)</button>
                     <button onclick="deleteGroup('${b.id}')" class="text-red-600 text-[11px] font-semibold"><i class="fa-solid fa-trash-can mr-1"></i>মুছুন (স্টক ফেরত আসবে)</button>
                 </div>
+                <button onclick="cloneBatch('${b.id}')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl py-2.5 text-xs no-print"><i class="fa-solid fa-clone mr-1.5"></i>এই আইটেমগুলো দিয়ে নতুন ব্যাচ তৈরি করুন</button>
             </div>` : ''}
         </div>`;
     }).join('')}</div>`;
@@ -891,6 +953,88 @@ function batchItemTable(b) {
             <tbody>${rows}<tr class="border-t-2 bg-gray-50 font-extrabold"><td class="p-1.5 text-left">মোট</td><td class="${cls}">${fmt(sum(r => r.gPer), 1)}</td><td class="${cls}"></td><td class="${cls}">${fmt(sum(r => r.cPer))}</td><td class="${cls}">${fmt(d.sell)}</td><td class="${cls} ${profitCls(pPer)}">${fmt(pPer)}</td><td class="${cls} ${profitCls(sum(r => r.profit))}">${fmt(sum(r => r.profit))}</td></tr></tbody></table></div>
         <p class="text-[10px] text-gray-500 px-2 py-1">প্যাকেজিং ${tk(d.pkg)} (প্রতি প্যাকেটে ${tk(d.pkg / d.P)}) আইটেমগুলোর মধ্যে ভাগ করা আছে।${d.S < d.P ? ' "লাভ ৳/প্যাকেট" বিক্রি হওয়া প্যাকেটের হিসাবে; "ব্যাচে মোট লাভ"-এ অবিক্রীত ' + fmt(d.P - d.S, 0) + ' প্যাকেটের খরচও ধরা আছে।' : ''} বাল্ক, খাওয়া ও অন্যান্য খরচ এই টেবিলে নেই।</p></div>`;
 }
+
+// ---------- প্রতিষ্ঠানের নাম ও লোগো ----------
+const DEFAULT_BRAND = 'আপনার প্রতিষ্ঠানের নাম';
+const DEFAULT_LOGO_SVG = '<svg viewBox="0 0 48 48" class="w-9 h-9" aria-hidden="true"><rect x="8" y="4" width="32" height="40" rx="6" fill="#ffffff"/><rect x="14" y="10" width="14" height="3.5" rx="1.75" fill="#10b981"/><rect x="14" y="17" width="20" height="2.5" rx="1.25" fill="#d1d5db"/><rect x="14" y="30" width="5" height="9" rx="1.5" fill="#10b981"/><rect x="21.5" y="25" width="5" height="14" rx="1.5" fill="#f59e0b"/><rect x="29" y="21" width="5" height="18" rx="1.5" fill="#0d9488"/></svg>';
+const defaultLogoHtml = () => DEFAULT_LOGO_SVG;
+let brandDraft = { name: '', logo: '', thumb: '' };
+function applyBrand() {
+    const br = (db && db.brand) || {}, name = (br.name || '').trim() || DEFAULT_BRAND, logoOk = br.logo && /^data:image\//.test(br.logo);
+    const h = el('brand-name'); if (h) h.textContent = name;
+    const ic = el('brand-icon'); if (ic) ic.innerHTML = logoOk ? '<img src="' + br.logo + '" alt="" class="w-9 h-9 rounded-lg object-contain bg-white/90 p-0.5">' : defaultLogoHtml();
+    try { document.title = (br.name || '').trim() ? (br.name.trim() + ' - স্টক ও লাভের লেজার') : 'স্টক ও লাভের লেজার'; } catch (e) {}
+    if (cloudUser) { try { localStorage.setItem('sbx_brand_last', JSON.stringify({ name: br.name || '', logo: logoOk ? br.logo : '' })); } catch (e) {} }
+}
+function openBrand() {
+    if (!canWrite()) return;
+    const br = db.brand || {}; brandDraft = { name: br.name || '', logo: br.logo || '', thumb: br.thumb || '' };
+    openModal('<i class="fa-solid fa-palette text-emerald-600 mr-1.5"></i>প্রতিষ্ঠানের নাম ও লোগো', `
+        <p class="text-gray-500">এখানে দিলে অ্যাপের ওপরে আপনার প্রতিষ্ঠানের নাম ও লোগো দেখাবে। এটা শুধু আপনার অ্যাকাউন্টে থাকে, অন্য কেউ দেখতে পায় না। লোগো ছোট করে সেভ হয়।</p>
+        <div><label class="block font-bold text-gray-700 mb-1">প্রতিষ্ঠানের নাম</label><input id="br-name" maxlength="40" value="${esc(brandDraft.name)}" oninput="brandPreview()" class="${INP_L}" placeholder="যেমন: রহিম ড্রাই ফ্রুটস"></div>
+        <div><label class="block font-bold text-gray-700 mb-1">লোগো (ছবি)</label><input type="file" accept="image/*" onchange="brandPick(this)" class="text-xs w-full"></div>
+        <div id="br-prev"></div>
+        ${btnMain('brandSave()', 'সেভ করুন', 'emerald')}
+        <div class="flex justify-between text-xs"><button onclick="brandDraft.logo='';brandDraft.thumb='';brandPreview()" class="text-red-600 font-bold">লোগো মুছুন</button><button onclick="brandReset()" class="text-gray-500 font-bold">নাম ও লোগো মুছে ডিফল্টে ফিরুন</button></div>`);
+    brandPreview();
+}
+function brandPreview() {
+    const n = el('br-name') ? el('br-name').value.trim() : brandDraft.name; brandDraft.name = n;
+    const pv = el('br-prev'); if (!pv) return;
+    pv.innerHTML = `<div class="rounded-xl p-3 text-white bg-gradient-to-r from-emerald-600 to-teal-700 flex items-center gap-2">${brandDraft.logo ? `<img src="${brandDraft.logo}" alt="" class="w-9 h-9 rounded-lg object-contain bg-white/90 p-0.5">` : defaultLogoHtml()}<div><div class="font-bold leading-tight">${esc(n || DEFAULT_BRAND)}</div><div class="text-[11px] text-emerald-100">প্রিভিউ</div></div></div>`;
+}
+function brandPick(inp) {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    if (!/^image\//.test(f.type)) { toast('ছবি বেছে নিন'); return; }
+    const r = new FileReader();
+    r.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+            const S = 160, k = Math.min(1, S / Math.max(img.width, img.height)), w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+            let url = c.toDataURL('image/png');
+            if (url.length > 70000) { ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); url = c.toDataURL('image/jpeg', 0.85); }
+            if (url.length > 90000) { toast('ছবিটা বেশি জটিল/বড়, সাধারণ ছোট ছবি দিন'); return; }
+            // অ্যাডমিন তালিকার জন্য খুব ছোট থাম্বনেইল (৪৮px)
+            const tc = document.createElement('canvas'); tc.width = 48; tc.height = 48;
+            const tx = tc.getContext('2d'), tk2 = 48 / Math.max(w, h), tw = Math.max(1, Math.round(w * tk2)), th = Math.max(1, Math.round(h * tk2));
+            tx.drawImage(c, (48 - tw) / 2, (48 - th) / 2, tw, th);
+            let thumb = tc.toDataURL('image/png');
+            if (thumb.length > 6000) { tx.globalCompositeOperation = 'destination-over'; tx.fillStyle = '#fff'; tx.fillRect(0, 0, 48, 48); thumb = tc.toDataURL('image/jpeg', 0.7); }
+            brandDraft.logo = url; brandDraft.thumb = thumb.length <= 9000 ? thumb : ''; brandPreview();
+        };
+        img.onerror = () => toast('ছবি পড়া যায়নি');
+        img.src = r.result;
+    };
+    r.readAsDataURL(f);
+}
+function brandSave() {
+    if (!canWrite()) return;
+    const n = (el('br-name').value || '').trim().slice(0, 40);
+    db.brand = (n || brandDraft.logo) ? { name: n, logo: brandDraft.logo || '', thumb: brandDraft.logo ? (brandDraft.thumb || '') : '' } : {};
+    db.brandDirty = true; closeModal(); refresh(); toast('প্রতিষ্ঠানের নাম ও লোগো সেভ হয়েছে');
+}
+function brandReset() {
+    if (!canWrite() || !confirm('নাম ও লোগো মুছে ডিফল্টে ফিরবেন?')) return;
+    db.brand = {}; db.brandDirty = true; closeModal(); refresh();
+}
+
+// অ্যাডমিন তালিকায় দেখানোর জন্য নাম ও ছোট লোগো profiles/{uid} এ রাখা (ব্যর্থ হলে মূল ডাটা আটকায় না)
+function syncProfile(force) {
+    if (DEMO || !FB || !cloudUser || !FB.auth.currentUser || !acc.ok) return;
+    const br = db.brand || {}, uid = cloudUser.uid, key = 'sbx_prof_' + uid;
+    const sig = JSON.stringify([(cloudUser.email || '').toLowerCase(), br.name || '', br.thumb || '']);
+    if (!force && localStorage.getItem(key) === sig) return;
+    if (!force && !br.name && !br.thumb && localStorage.getItem(key) === null) return;
+    const { fs, f } = FB;
+    f.setDoc(f.doc(fs, 'profiles', uid), { email: (cloudUser.email || '').toLowerCase(), name: br.name || '', thumb: br.thumb || '', u: f.serverTimestamp() }, { merge: true })
+        .then(() => { try { localStorage.setItem(key, sig); } catch (e) {} }).catch(() => {});
+}
+function brandHint() {
+    if (DEMO || (db.brand && (db.brand.name || db.brand.logo)) || localStorage.getItem('sbx_brandhint')) return '';
+    return `<div class="bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-xl p-2.5 mb-3 flex items-center justify-between gap-2 no-print"><span><i class="fa-solid fa-palette mr-1"></i>আপনার প্রতিষ্ঠানের নাম ও লোগো বসান, অ্যাপের ওপরে আপনার নামেই দেখাবে।</span><span class="whitespace-nowrap"><button onclick="openBrand()" class="font-bold underline">বসান</button> <button onclick="try{localStorage.setItem('sbx_brandhint','1')}catch(e){};render()" class="text-gray-500 ml-1">পরে</button></span></div>`;
+}
 function toggleItemOpen(n) { ui.itemOpen[n] = !ui.itemOpen[n]; render(); }
 function viewItemProfit() {
     if (!state.batches.length && !db.txs.some(t => t.type === 'BULK')) return '<p class="text-center text-gray-500 text-sm py-6">এখনো ব্যাচ বা বিক্রি নেই।</p>';
@@ -913,6 +1057,79 @@ function viewItemProfit() {
             <tr class="border-t-2 bg-emerald-50 font-extrabold"><td class="p-1.5 text-left text-emerald-900">মোট নিট লাভ</td><td colspan="3"></td><td class="${cls} ${profitCls(ip.finalNet)}">${fmt(ip.finalNet)}</td></tr></tbody></table></div>
         <p class="text-[11px] ${ok ? 'text-emerald-700' : 'text-red-600'} mb-2">${ok ? '✓ হোমের লাইফটাইম নিট লাভের সাথে মিলেছে' : 'হোমের নিট লাভের সাথে ' + tk(diff) + ' তফাত আছে'}</p>
         <p class="text-[10px] text-gray-500 mb-4">সারিতে চাপলে কোন ব্যাচ থেকে কত লাভ এসেছে দেখা যায়। ব্লেন্ডের উপাদানের খরচ ব্লেন্ড আইটেমে চলে যায়, তাই ব্লেন্ডের লাভ ব্লেন্ড আইটেমেই ধরা হয়।</p>`;
+}
+
+// ---------- তারিখভিত্তিক রিপোর্ট ----------
+function reportRange(r) {
+    const d0 = x => { const d = new Date(x); d.setHours(0, 0, 0, 0); return d; };
+    const now = new Date(), today = d0(now), DAY = 864e5;
+    if (r.p === 'today') return { from: today.getTime(), to: today.getTime() + DAY, label: 'আজ' };
+    if (r.p === 'week') return { from: today.getTime() - 6 * DAY, to: today.getTime() + DAY, label: 'শেষ ৭ দিন' };
+    if (r.p === 'month') return { from: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), to: today.getTime() + DAY, label: 'এই মাস' };
+    if (r.p === 'last') return { from: new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime(), to: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), label: 'গত মাস' };
+    if (r.p === 'custom' && r.from && r.to) {
+        const f = new Date(r.from + 'T00:00:00').getTime(), t = new Date(r.to + 'T00:00:00').getTime() + DAY;
+        return { from: Math.min(f, t - DAY), to: Math.max(t, f + DAY), label: r.from + ' থেকে ' + r.to };
+    }
+    return { from: -Infinity, to: Infinity, label: 'শুরু থেকে এখন পর্যন্ত' };
+}
+// ব্যাচ ধরা হয় ব্যাচ শুরুর তারিখে; ব্যাচের বাইরের বাল্ক/খাওয়া/খরচ ধরা হয় নিজ নিজ তারিখে
+function reportCalc(from, to) {
+    const inR = ts => ts >= from && ts < to;
+    const R = { batches: [], packets: 0, sold: 0, pktRev: 0, rawCost: 0, pkg: 0, bulkRev: 0, bulkCost: 0, eatCost: 0, expense: 0, outBulkRev: 0, outBulkCost: 0, outEat: 0, outExp: 0, outLoose: 0, net: 0, exp: {}, eat: {}, bulkItems: {} };
+    state.batches.filter(b => inR(b.ts)).forEach(b => {
+        R.batches.push(b); R.packets += b.packets; R.sold += b.soldPackets; R.pktRev += b.packetRevenue;
+        R.rawCost += b.totalPacketCost - b.packagingCost; R.pkg += b.packagingCost;
+        R.bulkRev += b.bulkRev; R.bulkCost += b.bulkCost; R.eatCost += b.eatCost; R.expense += b.otherCost; R.net += b.net;
+    });
+    db.txs.forEach(t => {
+        if (!inR(t.ts)) return;
+        const c = state.costOf[t.id] || 0, inBatch = t.ref && t.ref.indexOf('b_') === 0;
+        if (t.type === 'EXPENSE') { R.exp[t.item] = (R.exp[t.item] || 0) + num(t.amountTk); }
+        if (t.type === 'EAT') { R.eat[t.item] = (R.eat[t.item] || 0) + c; }
+        if (t.type === 'BULK') { R.bulkItems[t.item] = (R.bulkItems[t.item] || 0) + num(t.amountTk) - c; }
+        if (inBatch) return;
+        if (t.type === 'BULK') { R.outBulkRev += num(t.amountTk); R.outBulkCost += c; }
+        else if (t.type === 'EAT') R.outEat += c;
+        else if (t.type === 'EXPENSE') R.outExp += num(t.amountTk);
+        else if (t.type === 'PACKET') R.outLoose += c;
+    });
+    R.outside = R.outBulkRev - R.outBulkCost - R.outEat - R.outExp - R.outLoose;
+    R.total = R.net + R.outside;
+    R.revenue = R.pktRev + R.bulkRev + R.outBulkRev;
+    return R;
+}
+function reportText(R, label) {
+    const b = n => tk(n);
+    return `${(db.brand && db.brand.name) || 'লেজার'} - রিপোর্ট (${label})\nনিট লাভ: ${b(R.total)}\nমোট বিক্রি: ${b(R.revenue)} (প্যাকেট ${b(R.pktRev)}, বাল্ক ${b(R.bulkRev + R.outBulkRev)})\nপ্যাকেটে কাঁচামাল: ${b(R.rawCost)} • প্যাকেজিং: ${b(R.pkg)}\nবাল্কের কাঁচামাল: ${b(R.bulkCost + R.outBulkCost)} • খাওয়া/ঘাটতি: ${b(R.eatCost + R.outEat)} • অন্যান্য খরচ: ${b(R.expense + R.outExp)}\nব্যাচ: ${R.batches.length}টি • প্যাকেট তৈরি ${fmt(R.packets, 0)}, বিক্রি ${fmt(R.sold, 0)}`;
+}
+function copyReport() {
+    const rg = reportRange(ui.rep), txt = reportText(reportCalc(rg.from, rg.to), rg.label);
+    try { navigator.clipboard.writeText(txt).then(() => toast('রিপোর্ট কপি হয়েছে, WhatsApp-এ পেস্ট করুন'), () => prompt('রিপোর্টটা কপি করুন:', txt)); }
+    catch (e) { prompt('রিপোর্টটা কপি করুন:', txt); }
+}
+function viewReport() {
+    const rg = reportRange(ui.rep), R = reportCalc(rg.from, rg.to);
+    const chip = (v, t) => `<button onclick="ui.rep.p='${v}';render()" class="px-2.5 py-1.5 rounded-full border text-[11px] font-semibold whitespace-nowrap ${ui.rep.p === v ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600'}">${t}</button>`;
+    const row = (l, v, cls) => `<div class="flex justify-between py-0.5"><span class="text-gray-600">${l}</span><b class="${cls || 'text-gray-800'}">${v}</b></div>`;
+    const expList = Object.keys(R.exp).sort((a, b) => R.exp[b] - R.exp[a]).map(k => row(esc(k), tk(R.exp[k]), 'text-rose-600')).join('');
+    const eatList = Object.keys(R.eat).filter(k => R.eat[k] > 0.005).sort((a, b) => R.eat[b] - R.eat[a]).map(k => row(esc(k), tk(R.eat[k]), 'text-rose-600')).join('');
+    const bl = R.batches.slice().reverse().map(b => `<div class="flex justify-between items-center border-t py-1.5"><div class="min-w-0"><b class="text-gray-800">${esc(String(b.date).slice(0, 10))}</b>${b.note ? ` <span class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-1.5">${esc(b.note)}</span>` : ''}<div class="text-[10px] text-gray-500">${fmt(b.packets, 0)} প্যাকেট • বিক্রি ${fmt(b.soldPackets, 0)} • খরচ/প্যাকেট ${tk(b.costPerPacket)}</div></div><b class="${profitCls(b.net)}">${tk(b.net)}</b></div>`).join('');
+    return `<div class="flex gap-1.5 overflow-x-auto pb-2 no-print">${chip('today', 'আজ')}${chip('week', 'শেষ ৭ দিন')}${chip('month', 'এই মাস')}${chip('last', 'গত মাস')}${chip('all', 'সব')}${chip('custom', 'নিজে বাছুন')}</div>
+    ${ui.rep.p === 'custom' ? `<div class="grid grid-cols-2 gap-2 mb-2 text-xs no-print"><div><label class="block text-gray-600 mb-0.5">থেকে</label><input type="date" value="${esc(ui.rep.from)}" onchange="ui.rep.from=this.value;render()" class="${INP_L}"></div><div><label class="block text-gray-600 mb-0.5">পর্যন্ত</label><input type="date" value="${esc(ui.rep.to)}" onchange="ui.rep.to=this.value;render()" class="${INP_L}"></div></div>${(!ui.rep.from || !ui.rep.to) ? '<p class="text-[11px] text-amber-700 mb-2">দুটো তারিখই দিন; না দিলে সব সময়ের রিপোর্ট দেখাচ্ছে।</p>' : ''}` : ''}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-3 mb-3 text-xs">
+        <div class="text-[11px] text-gray-500">${esc((db.brand && db.brand.name) || '')} • রিপোর্ট: <b class="text-gray-700">${esc(rg.label)}</b></div>
+        <div class="flex justify-between items-end mt-1 mb-2"><span class="font-bold text-gray-800 text-sm">নিট লাভ</span><b class="text-2xl ${profitCls(R.total)}">${tk(R.total)}</b></div>
+        ${row('মোট বিক্রি', tk(R.revenue))}
+        <div class="pl-3 text-[11px]">${row('প্যাকেট বিক্রি', tk(R.pktRev))}${row('বাল্ক বিক্রি', tk(R.bulkRev + R.outBulkRev))}</div>
+        <div class="border-t mt-1.5 pt-1.5"><div class="font-bold text-gray-700">খরচ</div>
+        ${row('প্যাকেটে কাঁচামাল', tk(R.rawCost), 'text-rose-600')}${row('প্যাকেজিং', tk(R.pkg), 'text-rose-600')}${row('বাল্কের কাঁচামাল', tk(R.bulkCost + R.outBulkCost), 'text-rose-600')}${row('খাওয়া/ঘাটতি', tk(R.eatCost + R.outEat), 'text-rose-600')}${row('অন্যান্য খরচ', tk(R.expense + R.outExp), 'text-rose-600')}${R.outLoose > 0.005 ? row('ব্যাচ ছাড়া প্যাকেটের খরচ', tk(R.outLoose), 'text-rose-600') : ''}</div>
+        <div class="border-t mt-1.5 pt-1.5">${row('ব্যাচ', fmt(R.batches.length, 0) + 'টি')}${row('প্যাকেট তৈরি / বিক্রি', fmt(R.packets, 0) + ' / ' + fmt(R.sold, 0))}${R.batches.length ? row('গড় লাভ/ব্যাচ (ব্যাচের লাভ)', tk(R.net / R.batches.length), profitCls(R.net)) : ''}${row('ব্যাচের বাইরের লাভ/ক্ষতি', tk(R.outside), profitCls(R.outside))}</div>
+    </div>
+    ${expList ? `<div class="bg-white border border-gray-200 rounded-xl p-3 mb-3 text-xs"><div class="font-bold text-gray-700 mb-1">অন্যান্য খরচের ধরন</div>${expList}</div>` : ''}
+    ${eatList ? `<div class="bg-white border border-gray-200 rounded-xl p-3 mb-3 text-xs"><div class="font-bold text-gray-700 mb-1">খাওয়া/ঘাটতি আইটেম অনুযায়ী</div>${eatList}</div>` : ''}
+    <div class="bg-white border border-gray-200 rounded-xl p-3 mb-3 text-xs"><div class="font-bold text-gray-700 mb-1">এই সময়ের ব্যাচ (${R.batches.length})</div>${bl || '<p class="text-gray-500">এই সময়ে কোনো ব্যাচ নেই</p>'}</div>
+    <div class="flex gap-2 mb-4 no-print"><button onclick="copyReport()" class="flex-1 bg-emerald-600 text-white font-bold rounded-xl py-2.5 text-xs"><i class="fa-brands fa-whatsapp mr-1.5"></i>লেখা কপি করুন</button><button onclick="window.print()" class="flex-1 bg-gray-700 text-white font-bold rounded-xl py-2.5 text-xs"><i class="fa-solid fa-print mr-1.5"></i>প্রিন্ট / PDF</button></div>`;
 }
 function txVal(t) {
     const cost = state.costOf[t.id] || 0;
@@ -967,6 +1184,7 @@ function viewTxList() {
 const TX_EDIT_FIELDS = { OPENING: ['date', 'grams', 'price', 'note'], RESTOCK: ['date', 'item', 'grams', 'price', 'note'], BULK: ['date', 'item', 'grams', 'total', 'note'], EAT: ['date', 'item', 'grams', 'note'], EXPENSE: ['total', 'cat', 'note'], PACKET: ['grams', 'note'] };
 function txEdit(id) {
     const t = db.txs.find(x => x.id === id); if (!t) return;
+    if (measGuard(t)) return;
     if (!canWrite()) return;
     const F = TX_EDIT_FIELDS[t.type] || ['note'], has = k => F.includes(k);
     const lab = x => `<label class="block font-bold text-gray-700 mb-1">${x}</label>`;
@@ -1012,11 +1230,13 @@ function txEditSave(id) {
     if (canon(plain(nt)) === canon(plain(t))) { closeModal(); toast('কিছু বদলায়নি'); return; }
     nt.synced = false;
     db.txs = db.txs.map(x => x.id === id ? nt : x);
-    closeModal(); refresh(); toast('এন্ট্রি সংশোধন হয়েছে, হিসাব নতুন করে হয়েছে');
+    const ch = reconcileStarts(Math.min(t.ts, nt.ts) - 1);
+    closeModal(); refresh(); notifyReconcile(ch, 'এন্ট্রি সংশোধন হয়েছে, হিসাব নতুন করে হয়েছে');
 }
 
 // ---------- মোছা ----------
 function deleteTx(id) {
+    if (measGuard(db.txs.find(x => x.id === id))) return;
     const t = db.txs.find(x => x.id === id); if (!t) return;
     if (t.type !== 'EXPENSE' && t.ref) { deleteGroup(t.ref); return; }
     tryDelete([id], null, 'এই লেনদেনটি মুছবেন?');
@@ -1033,11 +1253,13 @@ function tryDelete(ids, batchId, msg) { if (!canWrite()) return; ensureBk();
     const test = compute(remTx, remB);
     if (test.negatives.length) { alert('এটি মুছলে ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক মাইনাসে চলে যাবে। আগে পরের এন্ট্রিগুলো মুছুন।'); return; }
     if (!confirm(msg)) return;
+    const delTs = db.txs.filter(t => idSet.has(t.id)).map(t => t.ts).concat(batchId ? (db.batches.filter(b => b.id === batchId).map(b => b.ts)) : []);
     db.pendingDeleteTx.push(...ids);
     if (batchId) db.pendingDeleteBatch.push(batchId);
     db.txs = remTx; db.batches = remB;
     if (batchId && db.running && db.running.id === batchId) { db.running = null; db.runningDirty = true; }
-    refresh(); toast('মুছে ফেলা হয়েছে');
+    const ch = delTs.length ? reconcileStarts(Math.min(...delTs) - 1) : [];
+    refresh(); notifyReconcile(ch, 'মুছে ফেলা হয়েছে');
 }
 
 // ---------- মডাল ----------
@@ -1064,10 +1286,218 @@ function expenseSave() { if (!canWrite()) return;
 }
 
 // ব্যাচ সম্পাদনা
+
+// ---------- ব্যাচের উপাদান সংশোধন (ভুল গ্রাম / বাদ পড়া আইটেম) ----------
+
+// ---------- ব্যাচের শুরু ও শেষের মাপা ওজন সংশোধন ----------
+function measGuard(t) {
+    if (t && t.type === 'PACKET' && t.ref) { const b = db.batches.find(x => x.id === t.ref); if (b && b.meas && b.meas[t.item]) { openMeasEdit(b.id, t.item); return true; } }
+    return false;
+}
+function stockAt(name, ts) { const st2 = compute(db.txs.filter(t => t.ts < ts), []); const it = st2.map[name]; return it ? it.stock : 0; }
+function batchMeasSection(b) {
+    const rows = Object.keys(b.meas).map(n => {
+        const m = b.meas[n], has = m.end !== null && m.end !== undefined, used = has ? Math.max(0, m.start + (m.added || 0) - m.end) : 0;
+        return `<div class="flex items-center justify-between border-t border-amber-100 px-2 py-1.5">
+            <div><b class="text-gray-800">${esc(n)}</b><div class="text-[10px] text-gray-500">শুরু ${fg(m.start)}${m.added ? ' • মাঝে যোগ <span class="text-purple-700">' + (m.added > 0 ? '+' : '') + fg(m.added) + '</span>' : ''} • শেষ ${has ? fg(m.end) : '<span class="text-amber-700">লেখা হয়নি</span>'} • ব্যবহার <b>${fg(used)}</b></div></div>
+            <button onclick="openMeasEdit('${b.id}', decodeURIComponent('${encodeURIComponent(n)}'))" class="text-sky-600 px-2"><i class="fa-solid fa-pen"></i></button></div>`;
+    }).join('');
+    return `<div class="border border-amber-200 rounded-lg overflow-hidden no-print">
+        <div class="bg-amber-50 px-2 py-1 font-bold text-amber-900"><i class="fa-solid fa-scale-balanced mr-1"></i>মাপা ওজন: শুরু ও শেষ (ভুল হলে এখানে ঠিক করুন)</div>
+        ${rows}
+        <button onclick="openMeasAdd('${b.id}')" class="w-full text-left px-2 py-2 border-t border-amber-100 text-emerald-700 font-bold"><i class="fa-solid fa-circle-plus mr-1"></i>বাদ পড়া আইটেম যোগ করুন</button></div>`;
+}
+function openMeasAdd(bid) {
+    const b = db.batches.find(x => x.id === bid); if (!b || !canWrite()) return;
+    const left = state.items.filter(i => !(b.meas && b.meas[i.name]));
+    if (!left.length) { toast('সব আইটেমই তালিকায় আছে'); return; }
+    openModal('<i class="fa-solid fa-circle-plus text-emerald-600 mr-1.5"></i>বাদ পড়া আইটেম', `
+        <p class="text-gray-500">যে আইটেম ব্যাচে ব্যবহার করেছিলেন কিন্তু শুরু বা শেষে মাপতে ভুলে গিয়েছিলেন, সেটা বেছে নিন। পরের ধাপে শুরু ও শেষের ওজন লিখবেন।</p>
+        <select id="ma-item" class="${INP_L}">${left.map(i => `<option>${esc(i.name)}</option>`).join('')}</select>
+        <button onclick="openMeasEdit('${bid}', el('ma-item').value)" class="w-full bg-emerald-600 text-white font-bold rounded-xl py-2.5">এগিয়ে যান</button>`);
+}
+function openMeasEdit(bid, item) {
+    const b = db.batches.find(x => x.id === bid); if (!b || !canWrite()) return;
+    const m = (b.meas || {})[item] || { before: round(stockAt(item, b.ts), 3), start: '', end: null };
+    openModal(`<i class="fa-solid fa-scale-balanced text-amber-600 mr-1.5"></i>মাপা ওজন: ${esc(item)}`, `
+        <p class="text-gray-500">ব্যাচ শুরুর আগে সিস্টেমে ${esc(item)} ছিল <b>${fg(m.before)}</b>।${m.added ? ' ব্যাচ চলার সময় এতে <b class="text-purple-700">' + (m.added > 0 ? '+' : '') + fg(m.added) + '</b> যোগ হয়েছিল (যেমন নতুন ব্লেন্ড বা কেনা), তা হিসাবে ধরা আছে।' : ''} শুরুর আর শেষের মাপা ওজন ঠিক করলে ঘাটতি, ব্যবহার, খরচ ও লাভ নিজে নতুন করে হিসাব হবে।</p>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">শুরুর মাপা ওজন (গ্রাম)</label><input id="me-s" type="number" inputmode="decimal" oninput="measPrev()" value="${m.start === '' ? '' : esc(m.start)}" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">শেষের মাপা ওজন (গ্রাম)</label><input id="me-e" type="number" inputmode="decimal" oninput="measPrev()" value="${m.end === null || m.end === undefined ? '' : esc(m.end)}" class="${INP}" placeholder="ফাঁকা = ব্যবহার হয়নি"></div>
+        </div>
+        <div id="me-prev" class="bg-amber-50 border border-amber-100 rounded-xl p-2.5 space-y-1"></div>
+        <input type="hidden" id="me-a" value="${esc(m.added || 0)}"><input type="hidden" id="me-id" value="${esc(bid)}"><input type="hidden" id="me-item" value="${esc(item)}"><input type="hidden" id="me-b" value="${esc(m.before)}">
+        ${btnMain('measEditSave()', 'সংশোধন সেভ করুন', 'amber')}`);
+    measPrev();
+}
+function measPrev() {
+    const pv = el('me-prev'); if (!pv) return;
+    const before = num(el('me-b').value), sv = el('me-s').value, ev = el('me-e').value;
+    if (sv === '') { pv.innerHTML = '<span class="text-gray-500">শুরুর ওজন লিখুন</span>'; return; }
+    const S = num(sv), added = num(el('me-a') ? el('me-a').value : 0), diff = before - S, hasE = ev !== '', E = num(ev), used = hasE ? S + added - E : 0;
+    pv.innerHTML = `${row2('শুরুতে ' + (diff > EPS ? 'ঘাটতি' : diff < -EPS ? 'বাড়তি' : 'ঠিক'), fg(Math.abs(diff)))}${row2(added ? 'ব্যবহার (শুরু + মাঝে যোগ − শেষ)' : 'ব্যবহার (শুরু − শেষ)', hasE ? fg(used) : 'শেষ ওজন লেখা হয়নি')}${hasE && E > S + added + EPS ? '<div class="text-red-600">শেষের ওজন শুরুর ওজনের চেয়ে বেশি হতে পারে না</div>' : ''}`;
+}
+// ব্যাচ শুরুর ওজন-মেলানো এন্ট্রি (ঘাটতি / ঘাটতি থেকে বিক্রি / বাড়তি) বানায়
+function startTxs(b, item, before, S, old, k0) {
+    const tag = t => { t.grp = 's'; return t; }, news = [], diff = before - S; let k = k0, soldG = 0, soldTk = 0;
+    if (diff > EPS) {
+        soldG = Math.min(old.soldG || 0, diff); soldTk = old.soldG > 0 ? round((old.soldTk || 0) * soldG / old.soldG, 4) : 0;
+        const eatG = Math.max(0, diff - soldG);
+        if (soldG > 0) news.push(tag(makeTx('BULK', item, soldG, 0, soldTk, b.id, 'ব্যাচের আগে কম পাওয়া অংশ থেকে বিক্রি', b.ts + k++)));
+        if (eatG > EPS) news.push(tag(makeTx('EAT', item, eatG, 0, 0, b.id, 'অটো ঘাটতি (ব্যাচের আগে ওজন মেপে)', b.ts + k++)));
+    } else if (diff < -EPS) news.push(tag(makeTx('ADJUST_IN', item, -diff, 0, 0, b.id, 'মাপা ওজন বেশি, স্টক সংশোধন', b.ts + k++)));
+    return { news, soldG, soldTk };
+}
+// আগের কোনো এন্ট্রি বদলালে (ts এর পরের) প্রতিটি ব্যাচের শুরুর ঘাটতি/বাড়তি আবার মেলানো: মাপা ওজনই সত্য
+function reconcileStarts(afterTs) {
+    const changes = [];
+    db.batches.filter(b => b.meas && b.ts > afterTs).sort((x, y) => x.ts - y.ts).forEach(b => {
+        Object.keys(b.meas).forEach(item => {
+            const m = b.meas[item];
+            if (m.start === null || m.start === undefined || m.start === '') return;
+            const before = round(stockAt(item, b.ts), 3);
+            if (m.before !== null && m.before !== undefined && Math.abs(before - m.before) < 0.001) return;
+            const mine = db.txs.filter(t => t.ref === b.id && t.item === item && t.grp === 's'), ids = new Set(mine.map(t => t.id));
+            const r = startTxs(b, item, before, m.start, m, db.txs.filter(t => t.ref === b.id).length + 1);
+            ensureBk();
+            mine.forEach(t => db.pendingDeleteTx.push(t.id));
+            db.txs = db.txs.filter(t => !ids.has(t.id)).concat(r.news);
+            const was = (m.before === null || m.before === undefined) ? 0 : m.before - m.start;
+            b.meas = Object.assign({}, b.meas); b.meas[item] = Object.assign({}, m, { before, soldG: r.soldG, soldTk: r.soldTk });
+            b.synced = false;
+            changes.push({ date: String(b.date).slice(0, 10), item, was, now: before - m.start });
+        });
+    });
+    return changes;
+}
+function fmtAdj(d) { return d > EPS ? 'ঘাটতি ' + fg(d) : d < -EPS ? 'বাড়তি ' + fg(-d) : 'ঠিক'; }
+function notifyReconcile(ch, msg) {
+    if (!ch.length) { toast(msg); return; }
+    openModal('<i class="fa-solid fa-link text-emerald-600 mr-1.5"></i>পরের ব্যাচগুলো মিলিয়ে দেওয়া হয়েছে', `
+        <p class="text-gray-600">আগের এন্ট্রি ঠিক করায় পরের ব্যাচগুলোর শুরুর "ঘাটতি/বাড়তি" নতুন করে হিসাব হয়েছে। প্রতিটি ব্যাচে আপনার শুরুর মাপা ওজনকেই সত্য ধরা হয়েছে, তাই একই ওজন দুবার কাটা বা যোগ হবে না।</p>
+        <div class="space-y-1">${ch.map(c => `<div class="border rounded-lg p-2"><b>${esc(c.item)}</b> <span class="text-gray-500">(${esc(c.date)} এর ব্যাচ)</span><div class="text-[11px]"><span class="text-gray-500">আগে:</span> ${fmtAdj(c.was)} → <span class="text-gray-500">এখন:</span> <b>${fmtAdj(c.now)}</b></div></div>`).join('')}</div>
+        <p class="text-[11px] text-gray-500">${esc(msg)}</p>`);
+}
+function measEditSave() {
+    if (!canWrite()) return;
+    const bid = el('me-id').value, item = el('me-item').value, b = db.batches.find(x => x.id === bid); if (!b) return;
+    const sv = el('me-s').value, ev = el('me-e').value;
+    if (sv === '') { alert('শুরুর মাপা ওজন লিখুন'); return; }
+    const S = round(num(sv), 3), hasE = ev !== '', E = hasE ? round(num(ev), 3) : null;
+    if (S < 0) { alert('শুরুর ওজন ঠিকমতো লিখুন'); return; }
+    if (hasE && (E < 0 || E > S + (((b.meas || {})[item] || {}).added || 0) + EPS)) { alert('শেষের ওজন শুরুর ওজন (ও মাঝে যোগ হওয়া পরিমাণ) এর চেয়ে বেশি হতে পারে না'); return; }
+    const before = round(stockAt(item, b.ts), 3);   // ব্যাচ শুরুর সময় সিস্টেমে আসলে কত ছিল (সবসময় নতুন করে হিসাব)
+    const old = (b.meas || {})[item] || { soldG: 0, soldTk: 0 }, added = old.added || 0;
+    const mine = db.txs.filter(t => t.ref === bid && t.item === item && (t.grp === 's' || t.grp === 'p'));
+    const oldPacket = mine.find(t => t.grp === 'p');
+    const r = startTxs(b, item, before, S, old, db.txs.filter(t => t.ref === bid).length + 1), news = r.news;
+    if (hasE && S + added - E > EPS) { const otherPk = db.txs.filter(t => t.ref === bid && t.type === 'PACKET' && t.item !== item).map(t => t.ts);
+        const pt = makeTx('PACKET', item, round(S + added - E, 3), 0, 0, bid, '', oldPacket ? oldPacket.ts : (otherPk.length ? Math.max(...otherPk) : b.ts + 100)); pt.grp = 'p'; news.push(pt); }
+    const ids = new Set(mine.map(t => t.id)), newTxs = db.txs.filter(t => !ids.has(t.id)).concat(news);
+    const test = compute(newTxs, db.batches);
+    if (test.negatives.length) { alert('এই ওজনে ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক মাইনাসে চলে যায়। শুরু বা শেষের ওজন আবার দেখুন।'); return; }
+    ensureBk();
+    mine.forEach(t => db.pendingDeleteTx.push(t.id));
+    db.txs = newTxs;
+    b.meas = Object.assign({}, b.meas || {}); b.meas[item] = { before, start: S, end: E, soldG: r.soldG, soldTk: r.soldTk, added };
+    b.synced = false;
+    const ch = reconcileStarts(b.ts);
+    closeModal(); refresh(); notifyReconcile(ch, 'ওজন সংশোধন হয়েছে, ব্যাচের খরচ ও লাভ নতুন করে হিসাব হয়েছে');
+}
+function batchIngredients(b) {
+    if (b.meas) return batchMeasSection(b);
+    const ps = db.txs.filter(t => t.ref === b.id && t.type === 'PACKET').sort((x, y) => x.ts - y.ts);
+    const rows = ps.map(t => `<div class="flex items-center justify-between border-t border-amber-100 px-2 py-1.5">
+        <div><b class="text-gray-800">${esc(t.item)}</b> <span class="text-gray-500">${fg(t.grams)} • খরচ ${tk(state.costOf[t.id] || 0)}</span></div>
+        <div class="whitespace-nowrap"><button onclick="txEdit('${t.id}')" class="text-sky-600 px-1.5"><i class="fa-solid fa-pen"></i></button><button onclick="deleteTx('${t.id}')" class="text-red-500 px-1.5"><i class="fa-solid fa-trash-can"></i></button></div></div>`).join('');
+    return `<div class="border border-amber-200 rounded-lg overflow-hidden no-print">
+        <div class="bg-amber-50 px-2 py-1 font-bold text-amber-900"><i class="fa-solid fa-screwdriver-wrench mr-1"></i>উপাদান সংশোধন (ভুল গ্রাম বা বাদ পড়া আইটেম)</div>
+        ${rows || '<div class="px-2 py-1.5 text-gray-500">কোনো উপাদান নেই</div>'}
+        <button onclick="openBatchAddItem('${b.id}')" class="w-full text-left px-2 py-2 border-t border-amber-100 text-emerald-700 font-bold"><i class="fa-solid fa-circle-plus mr-1"></i>বাদ পড়া আইটেম যোগ করুন</button>
+    </div>`;
+}
+function openBatchAddItem(bid) {
+    const b = db.batches.find(x => x.id === bid); if (!b) return;
+    if (!canWrite()) return;
+    openModal('<i class="fa-solid fa-circle-plus text-emerald-600 mr-1.5"></i>ব্যাচে আইটেম যোগ', `
+        <p class="text-gray-500">ব্যাচ বানানোর সময় যে আইটেম বা গ্রাম লিখতে ভুলে গিয়েছিলেন, সেটা এখানে যোগ করুন। খরচ ব্যাচের তারিখের গড় দামে ধরা হবে এবং ব্যাচের খরচ, লাভ ও স্টক নিজে ঠিক হয়ে যাবে।</p>
+        <div><label class="block font-bold text-gray-700 mb-1">আইটেম</label><select id="ba-item" class="${INP_L}">${state.items.map(i => `<option>${esc(i.name)}</option>`).join('')}</select></div>
+        <div><label class="block font-bold text-gray-700 mb-1">পরিমাণ (গ্রাম)</label><input id="ba-g" type="number" inputmode="decimal" class="${INP}" placeholder="যেমন: 100"></div>
+        <input id="ba-note" class="${INP_L} !text-xs" placeholder="নোট (ইচ্ছাধীন)">
+        <input type="hidden" id="ba-id" value="${esc(bid)}">
+        ${btnMain('batchAddItemSave()', 'যোগ করুন', 'emerald')}`);
+}
+function batchAddItemSave() {
+    if (!canWrite()) return;
+    const bid = el('ba-id').value, b = db.batches.find(x => x.id === bid); if (!b) return;
+    const item = el('ba-item').value, g = round(num(el('ba-g').value), 3);
+    if (!item || g <= 0) { alert('আইটেম বেছে গ্রাম লিখুন'); return; }
+    const k = db.txs.filter(t => t.ref === bid).length + 1;
+    const t = makeTx('PACKET', item, g, 0, 0, bid, el('ba-note').value.trim() || 'ব্যাচে পরে যোগ করা', b.ts + k);   // ব্যাচের সময়ে বসাই, তাই ওই সময়ের গড় দামে খরচ
+    const test = compute(db.txs.concat([t]), db.batches);
+    if (test.negatives.length) { alert('ব্যাচের সময় ' + [...new Set(test.negatives.map(n => n.item))].join(', ') + ' এর স্টক যথেষ্ট ছিল না। পরিমাণ কমিয়ে চেষ্টা করুন।'); return; }
+    db.txs.push(t);
+    const ch = reconcileStarts(b.ts);
+    closeModal(); refresh(); notifyReconcile(ch, 'আইটেম যোগ হয়েছে, ব্যাচের খরচ ও লাভ নতুন করে হিসাব হয়েছে');
+}
+
+// ---------- এই ব্যাচের রেসিপিতে এখনকার স্টকে কতটি প্যাকেট বানানো যাবে ----------
+function planCalc(bid, nIn, sellIn) {
+    const b = state.batches.find(x => x.id === bid); if (!b) return null;
+    const P = b.packets > 0 ? b.packets : 1, by = {};
+    db.txs.forEach(t => { if (t.ref === bid && t.type === 'PACKET') by[t.item] = (by[t.item] || 0) + num(t.grams); });
+    const rows = Object.keys(by).filter(n => by[n] > EPS).map(n => {
+        const it = state.map[n], gPer = by[n] / P, stock = it ? Math.max(0, it.stock) : 0;
+        return { name: n, gPer, stock, avg: it ? it.avg : 0, repl: it ? it.repl : 0, maxP: Math.floor((stock + 1e-9) / gPer) };
+    });
+    if (!rows.length) return { b, P, rows, max: 0, n: 0, lim: [] };
+    const max = Math.min(...rows.map(r => r.maxP)), lim = rows.filter(r => r.maxP === max).map(r => r.name);
+    const n = (nIn === undefined || nIn === '') ? max : Math.max(0, Math.floor(num(nIn)));
+    const sell = (sellIn === undefined || sellIn === '') ? b.sellingPrice : num(sellIn);
+    rows.forEach(r => { r.need = r.gPer * n; r.left = r.stock - r.need; r.short = Math.max(0, r.need - r.stock); r.cost = r.need / 1000 * r.avg; r.buyCost = r.short / 1000 * r.repl; });
+    const pkgPer = b.packagingCost / P, costPer = rows.reduce((s, r) => s + r.gPer / 1000 * r.avg, 0) + pkgPer;
+    return { b, P, rows, max, lim, n, sell, pkgPer, costPer, totalCost: costPer * n, revenue: sell * n, profit: (sell - costPer) * n, buyTotal: rows.reduce((s, r) => s + r.buyCost, 0) };
+}
+function planHtml(bid, nIn, sellIn) {
+    const c = planCalc(bid, nIn, sellIn);
+    if (!c) return '<p class="text-red-600">ব্যাচ পাওয়া যায়নি</p>';
+    if (!c.rows.length) return '<p class="text-gray-500">এই ব্যাচে প্যাকেটে ব্যবহার হওয়া কোনো আইটেম নেই।</p>';
+    const cls = 'p-1.5 text-right', anyShort = c.rows.some(r => r.short > EPS);
+    const rows = c.rows.map(r => `<tr class="border-t ${r.short > EPS ? 'bg-red-50' : (c.lim.includes(r.name) ? 'bg-amber-50' : '')}">
+        <td class="p-1.5 text-left font-bold text-gray-800">${esc(r.name)}${c.lim.includes(r.name) ? ' <span class="text-[9px] text-amber-700">(সীমা)</span>' : ''}</td>
+        <td class="${cls}">${fmt(r.gPer, 1)}</td><td class="${cls}">${fmt(r.stock, 0)}</td><td class="${cls} font-bold">${fmt(r.maxP, 0)}</td>
+        <td class="${cls}">${fmt(r.need, 0)}</td><td class="${cls} ${r.short > EPS ? 'text-red-600 font-bold' : 'text-gray-600'}">${r.short > EPS ? 'কম ' + fmt(r.short, 0) : fmt(r.left, 0)}</td></tr>`).join('');
+    return `<div class="bg-purple-50 border border-purple-100 rounded-xl p-2.5 space-y-1">
+            <div class="flex justify-between"><span class="text-gray-600">এখনকার স্টকে সর্বোচ্চ বানানো যাবে</span><span class="font-extrabold text-purple-900 text-base">${fmt(c.max, 0)} প্যাকেট</span></div>
+            ${c.lim.length && c.max >= 0 ? `<div class="text-[11px] text-amber-800">যে আইটেম আগে শেষ হবে: <b>${esc(c.lim.join(', '))}</b></div>` : ''}
+        </div>
+        <div class="overflow-x-auto border rounded-lg"><table class="w-full text-[10px] whitespace-nowrap"><thead class="bg-gray-100 text-gray-600"><tr>
+            <th class="p-1.5 text-left">আইটেম</th><th class="p-1.5 text-right">গ্রাম/প্যাকেট</th><th class="p-1.5 text-right">এখন স্টক (g)</th><th class="p-1.5 text-right">কতটি প্যাকেট হবে</th><th class="p-1.5 text-right">${fmt(c.n, 0)} প্যাকেটে লাগবে (g)</th><th class="p-1.5 text-right">বাকি / কম (g)</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 space-y-1">
+            ${row2('এখনকার দামে খরচ/প্যাকেট', tk(c.costPer))}${row2('ওই ব্যাচে খরচ/প্যাকেট ছিল', tk(c.b.costPerPacket))}${row2('বিক্রি মূল্য/প্যাকেট', tk(c.sell))}
+            ${row2(fmt(c.n, 0) + ' প্যাকেটে মোট খরচ', tk(c.totalCost))}${row2('আনুমানিক আয়', tk(c.revenue))}
+            <div class="flex justify-between font-extrabold ${profitCls(c.profit)}"><span>আনুমানিক লাভ</span><span>${tk(c.profit)}</span></div>
+        </div>
+        ${anyShort ? `<div class="bg-red-50 border border-red-100 rounded-xl p-2.5 text-red-700">${fmt(c.n, 0)} প্যাকেটের জন্য স্টকে কম পড়বে। কিনতে হবে (শেষ কেনা দরে আনুমানিক ${tk(c.buyTotal)}): ${c.rows.filter(r => r.short > EPS).map(r => esc(r.name) + ' ' + fmt(r.short, 0) + ' g').join(', ')}</div>` : ''}
+        <p class="text-[10px] text-gray-500">হিসাব ওই ব্যাচের অনুপাতে (প্যাকেজিং ও দাম আপনি বদলাতে পারেন)। সব প্যাকেট বিক্রি হবে ধরে লাভ। এটা শুধু হিসাব, স্টকে কিছু বদলায় না।</p>`;
+}
+function openPlan(bid) {
+    const b = state.batches.find(x => x.id === bid); if (!b) return;
+    openModal('<i class="fa-solid fa-calculator text-purple-600 mr-1.5"></i>এই রেসিপিতে কতটি প্যাকেট বানানো যাবে', `
+        <p class="text-gray-500">ব্যাচ (${esc(b.date)}, ${fmt(b.packets, 0)} প্যাকেট) এ প্রতিটি আইটেম যে অনুপাতে ব্যবহার হয়েছিল, সেই অনুপাতে এখনকার স্টক দিয়ে হিসাব।</p>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-bold text-gray-700 mb-1">কতটি বানাতে চান?</label><input id="pl-n" type="number" inputmode="numeric" oninput="planRender()" placeholder="ফাঁকা = সর্বোচ্চ" class="${INP}"></div>
+            <div><label class="block font-bold text-gray-700 mb-1">বিক্রি মূল্য/প্যাকেট ৳</label><input id="pl-sell" type="number" inputmode="decimal" oninput="planRender()" value="${esc(b.sellingPrice)}" class="${INP}"></div>
+        </div>
+        <input type="hidden" id="pl-id" value="${esc(bid)}">
+        <div id="pl-out" class="space-y-2"></div>`);
+    planRender();
+}
+function planRender() { const o = el('pl-out'); if (o) o.innerHTML = planHtml(el('pl-id').value, el('pl-n').value, el('pl-sell').value); }
 function openBatchEdit(id) {
     const b = state.batches.find(x => x.id === id); if (!b) return;
     openModal('<i class="fa-solid fa-pen text-indigo-600 mr-1.5"></i>ব্যাচ সম্পাদনা', `
-        <p class="text-gray-500">অবিক্রীত প্যাকেট বিক্রি হলে "বিক্রি হয়েছে" সংখ্যা বাড়ান, লাভ নিজে ঠিক হবে। কাঁচামালের ওজন/খরচ এখান থেকে বদলায় না।</p>
+        <p class="text-gray-500">অবিক্রীত প্যাকেট বিক্রি হলে "বিক্রি হয়েছে" সংখ্যা বাড়ান, লাভ নিজে ঠিক হবে। কাঁচামালের ওজন ভুল হলে বা আইটেম বাদ পড়লে ব্যাচ কার্ডের "উপাদান সংশোধন" অংশ ব্যবহার করুন।</p>
         <div class="grid grid-cols-2 gap-2">
             <div><label class="block font-bold text-gray-700 mb-1">মোট প্যাকেট</label><input id="be-p" type="number" inputmode="decimal" value="${esc(b.packets)}" class="${INP}"></div>
             <div><label class="block font-bold text-gray-700 mb-1">বিক্রি হয়েছে</label><input id="be-s" type="number" inputmode="decimal" value="${esc(b.soldPackets)}" class="${INP}"></div>
@@ -1276,12 +1706,12 @@ const csvCell = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 function exportTxCsv() {
     const lines = [['তারিখ', 'ধরন', 'আইটেম', 'গ্রাম', 'কেজি দর', 'পরিমাণ/আয় ৳', 'খরচ ৳', 'রেফারেন্স', 'নোট'].map(csvCell).join(',')];
     db.txs.slice().sort((a, b) => a.ts - b.ts).forEach(t => lines.push([t.date, TYPE_LABEL[t.type] || t.type, t.item, t.grams, t.pricePerKg, t.amountTk, round(state.costOf[t.id] || 0, 2), t.ref, t.note].map(csvCell).join(',')));
-    download('safabox-transactions.csv', lines.join('\n'));
+    download('ledger-transactions.csv', lines.join('\n'));
 }
 function exportItemsCsv() {
     const lines = [['আইটেম', 'মোট কেনা g', 'মোট কেনা ৳', 'লাইফটাইম গড় দর', 'প্যাকেটে g', 'প্যাকেটে ৳', 'বাল্ক g', 'খাওয়া g', 'খাওয়া ৳', 'বর্তমান স্টক g', 'বর্তমান গড় দর', 'স্টক মূল্য ৳'].map(csvCell).join(',')];
     state.items.forEach(i => lines.push([i.name, round(i.boughtG, 1), round(i.boughtCost, 2), round(i.lifeAvgBuy, 2), round(i.pktG, 1), round(i.pktCost, 2), round(i.bulkG, 1), round(i.eatG, 1), round(i.eatCost, 2), round(i.stock, 1), round(i.avg, 2), round(i.value, 2)].map(csvCell).join(',')));
-    download('safabox-items.csv', lines.join('\n'));
+    download('ledger-items.csv', lines.join('\n'));
 }
 
 // ---------- সাবস্ক্রিপশন / মেয়াদ ----------
@@ -1311,7 +1741,9 @@ function renderAccBanner() {
     const b = el('acc-banner'); if (!b) return;
     if (DEMO || !cloudUser || !acc.known || acc.plan === 'admin') { b.innerHTML = ''; return; }
     const days = Math.ceil((acc.untilMs - Date.now()) / 864e5);
-    const msg = 'আসসালামু আলাইকুম, SafaBoxBD লেজারের মেয়াদ বাড়াতে চাই। আমার Gmail: ' + (cloudUser.email || '');
+    const want = (acc.plan === 'trial' && acc.ok) ? 'সাবস্ক্রিপশন নিতে চাই' : 'সাবস্ক্রিপশন নবায়ন করতে চাই';
+    const bn = ((db.brand && db.brand.name) || '').trim();
+    const msg = 'আসসালামু আলাইকুম, আমি লেজার অ্যাপের ' + want + '।\nআমার Gmail: ' + (cloudUser.email || '') + (bn ? '\nপ্রতিষ্ঠান: ' + bn : '') + '\nপেমেন্টের নিয়ম জানালে ধন্যবাদ।';
     const link = SUPPORT_WHATSAPP ? ` <a href="https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" class="underline font-bold"><i class="fa-brands fa-whatsapp mr-0.5"></i>WhatsApp-এ যোগাযোগ</a>` : '';
     let html = '';
     if (!acc.ok) html = `<div class="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1.5"><i class="fa-solid fa-lock mr-1"></i>মেয়াদ শেষ: এখন শুধু দেখা ও CSV নেওয়া যাবে, নতুন এন্ট্রি বন্ধ।${link}</div>`;
@@ -1325,7 +1757,8 @@ async function openAdmin() {
     if (!FB) { toast('ইন্টারনেট চালু করুন'); return; }
     openModal('অ্যাডমিন: সাবস্ক্রিপশন', '<p class="text-gray-500">লোড হচ্ছে...</p>');
     try {
-        const { fs, f } = FB, snap = await f.getDocs(f.collection(fs, 'access')), rows = [];
+        const { fs, f } = FB, snap = await f.getDocs(f.collection(fs, 'access')), rows = [], profs = {};
+        try { (await f.getDocs(f.collection(fs, 'profiles'))).forEach(d => { const x = d.data(); if (x && x.email) profs[String(x.email).toLowerCase()] = x; }); } catch (e) {}
         snap.forEach(d => { const a = accFromDoc(d.data()); rows.push({ email: d.id, plan: a ? a.plan : '', untilMs: a ? a.untilMs : 0 }); });
         rows.sort((x, y) => y.untilMs - x.untilMs);
         const now = Date.now();
@@ -1333,7 +1766,11 @@ async function openAdmin() {
             const days = Math.ceil((r.untilMs - now) / 864e5), live = r.untilMs > now;
             const label = r.plan === 'trial' ? 'ট্রায়াল' : 'পেইড';
             return `<div class="border rounded-lg p-2 ${live ? 'bg-white' : 'bg-red-50'}">
-                <div class="font-bold text-gray-800 break-all">${esc(r.email)}</div>
+                <div class="flex items-center gap-2">${(() => {
+                    const pr = profs[r.email] || {}, nm = (pr.name || '').trim();
+                    const th = (pr.thumb && /^data:image\//.test(pr.thumb)) ? `<img src="${pr.thumb}" alt="" class="w-9 h-9 rounded-lg object-contain border bg-white shrink-0">` : `<div class="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center text-sm font-bold shrink-0">${esc((nm || r.email).charAt(0).toUpperCase())}</div>`;
+                    return th + `<div class="min-w-0">${nm ? `<div class="font-bold text-gray-900">${esc(nm)}</div>` : ''}<div class="${nm ? 'text-[11px] text-gray-500' : 'font-bold text-gray-800'} break-all">${esc(r.email)}</div></div>`;
+                })()}</div>
                 <div class="text-[11px] ${live ? 'text-emerald-700' : 'text-red-600'}">${label} • ${live ? days + ' দিন বাকি (' + new Date(r.untilMs).toLocaleDateString('bn-BD') + ' পর্যন্ত)' : 'মেয়াদ শেষ'}</div>
                 <div class="flex gap-1 mt-1.5 flex-wrap">
                     <button onclick="adminExtend('${esc(r.email)}',30)" class="bg-emerald-600 text-white rounded px-2 py-1">+৩০ দিন</button>
@@ -1375,7 +1812,7 @@ let FB = null, FBp = null, authStarted = false, unsubs = [], lastErr = null, las
 let retryN = 0, syncing = false, syncAgain = false, syncTimer = null;
 const queued = {}, inflight = new Set();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const emptyDb = () => ({ txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false });
+const emptyDb = () => ({ txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false, brand: {}, brandDirty: false });
 function canon(o) {
     if (Array.isArray(o)) return '[' + o.map(canon).join(',') + ']';
     if (o && typeof o === 'object') return '{' + Object.keys(o).filter(k => o[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canon(o[k])).join(',') + '}';
@@ -1384,7 +1821,7 @@ function canon(o) {
 const plain = o => { const c = JSON.parse(JSON.stringify(o)); delete c.synced; delete c._sat; return c; };
 function renderSoon() { clearTimeout(renderT); renderT = setTimeout(render, 150); }
 
-function pendingCount() { return db.txs.filter(t => !t.synced).length + db.batches.filter(b => !b.synced).length + db.pendingDeleteTx.length + db.pendingDeleteBatch.length + (db.runningDirty ? 1 : 0) + (db.pricesDirty ? 1 : 0); }
+function pendingCount() { return db.txs.filter(t => !t.synced).length + db.batches.filter(b => !b.synced).length + db.pendingDeleteTx.length + db.pendingDeleteBatch.length + (db.runningDirty ? 1 : 0) + (db.pricesDirty ? 1 : 0) + (db.brandDirty ? 1 : 0); }
 function sig() { return db.txs.map(t => t.id).join(',') + '#' + db.batches.map(b => b.id).join(',') + '#' + (db.running ? db.running.id : ''); }
 function updateBadge() {
     const ic = el('sync-icon'), tx = el('sync-text'); if (!ic) return;
@@ -1438,10 +1875,23 @@ function startAuth(F) {
 function showLogin(msg) {
     const s = el('login-screen'); if (!s) return;
     s.classList.remove('hidden');
+    try {
+        const lb = JSON.parse(localStorage.getItem('sbx_brand_last')) || {};
+        const ln = el('login-name'), ll = el('login-logo');
+        if (ln) ln.textContent = (lb.name || '').trim() || DEFAULT_BRAND;
+        if (ll) ll.innerHTML = (lb.logo && /^data:image\//.test(lb.logo)) ? '<img src="' + lb.logo + '" alt="" class="w-full h-full object-contain bg-white">' : defaultLogoHtml().replace('w-9 h-9', 'w-full h-full');
+    } catch (e) {}
+    const lw = el('login-warn'); if (lw) lw.classList.toggle('hidden', !inAppBrowser());
     const cfg = getFbConfig();
     el('login-main').classList.toggle('hidden', !cfg);
     el('login-setup').classList.toggle('hidden', !!cfg);
     el('login-msg').textContent = msg || '';
+}
+const inAppBrowser = () => /FBAN|FBAV|FB_IAB|FBIOS|Messenger|Instagram|TikTok|Snapchat|Line\/|MicroMessenger|; wv\)/i.test((navigator.userAgent || ''));
+function copyAppLink() {
+    const url = location.href.split('#')[0];
+    try { navigator.clipboard.writeText(url).then(() => toast('লিংক কপি হয়েছে, Chrome-এ পেস্ট করুন'), () => prompt('লিংকটা কপি করুন:', url)); }
+    catch (e) { prompt('লিংকটা কপি করুন:', url); }
 }
 function hideLogin() { const s = el('login-screen'); if (s) s.classList.add('hidden'); }
 async function doLogin() {
@@ -1589,7 +2039,7 @@ function attachListeners() {
     let maxU = 0;
     const finish = changed => {
         if (maxU) { const nv = maxU - 10000, prev = Number(localStorage.getItem(lastKey)) || 0; if (nv > prev) { try { localStorage.setItem(lastKey, String(nv)); } catch (e) {} } }
-        recompute(); persist();
+        recompute(); persist(); applyBrand();
         if (changed) renderSoon(); else updateBadge();
     };
     const uOf = data => (data && data.u && data.u.toMillis) ? data.u.toMillis() : 0;
@@ -1618,6 +2068,12 @@ function attachListeners() {
             }
         }, onListenErr));
     }
+
+    unsubs.push(f.onSnapshot(f.doc(fs, 'users', uid, 'meta', 'brand'), d => {
+        if (d.metadata.hasPendingWrites || !d.exists() || db.brandDirty) return;
+        let b = {}; try { b = JSON.parse(d.data().b) || {}; } catch (e) {}
+        if (canon(b) !== canon(db.brand || {})) { db.brand = b; finish(true); }
+    }, onListenErr));
 
     unsubs.push(f.onSnapshot(f.doc(fs, 'users', uid, 'meta', 'prices'), d => {
         if (d.metadata.hasPendingWrites || !d.exists() || db.pricesDirty) return;
@@ -1694,6 +2150,10 @@ async function pushPending(manual) {
         const pj = JSON.stringify(db.prices || {}), key = 'prices', sg = 'p:' + pj;
         if (queued[key] !== sg) ops.push({ keys: { [key]: sg }, applies: [() => { if (db.pricesDirty && JSON.stringify(db.prices || {}) === pj) db.pricesDirty = false; }], ref: f.doc(fs, 'users', uid, 'meta', 'prices'), data: { p: pj, u: f.serverTimestamp() } });
     }
+    if (db.brandDirty) {
+        const bj = JSON.stringify(db.brand || {}), key = 'brand', sg = 'b:' + bj;
+        if (queued[key] !== sg) ops.push({ keys: { [key]: sg }, applies: [() => { if (db.brandDirty && JSON.stringify(db.brand || {}) === bj) db.brandDirty = false; }], ref: f.doc(fs, 'users', uid, 'meta', 'brand'), data: { b: bj, u: f.serverTimestamp() } });
+    }
     for (let i = 0; i < ops.length; i += 15) {   // রুলসে ব্যাচড রাইটে অ্যাক্সেস-কলের সীমা আছে, তাই ছোট ভাগে পাঠাই
         const chunk = ops.slice(i, i + 15), wb = f.writeBatch(fs);
         chunk.forEach(o => { wb.set(o.ref, o.data, { merge: true }); Object.assign(queued, o.keys); });
@@ -1716,7 +2176,7 @@ async function syncNow(manual) {
     if (!acc.ok) { updateBadge(); if (manual) canWrite(); return; }
     if (syncing) { syncAgain = true; return; }
     syncing = true; updateBadge();
-    try { await ensureSchema(); await pushPending(manual); await finalizeSchema(); } catch (e) { lastErr = e; }
+    try { await ensureSchema(); await pushPending(manual); await finalizeSchema(); syncProfile(); } catch (e) { lastErr = e; }
     syncing = false; lastSyncAt = Date.now(); persist(); updateBadge();
     const p = pendingCount();
     if (manual) toast(p ? 'কিছু এন্ট্রি এখনো যায়নি, নেট থাকলে নিজে চলে যাবে' : 'সবকিছু ক্লাউডে আছে');
