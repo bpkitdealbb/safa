@@ -284,9 +284,9 @@ const TYPE_COLOR = { OPENING: 'bg-sky-100 text-sky-800', RESTOCK: 'bg-sky-100 te
 function loadDb() {
     try {
         const d = JSON.parse(localStorage.getItem(LS_KEY));
-        if (d && Array.isArray(d.txs)) return { txs: d.txs, batches: d.batches || [], pendingDeleteTx: d.pendingDeleteTx || [], pendingDeleteBatch: d.pendingDeleteBatch || [], running: d.running || null, runningDirty: !!d.runningDirty, bkMap: d.bkMap || {}, prices: d.prices || {}, pricesDirty: !!d.pricesDirty, brand: d.brand || {}, brandDirty: !!d.brandDirty, units: d.units || {}, unitsDirty: !!d.unitsDirty, hist: d.hist || [] };
+        if (d && Array.isArray(d.txs)) return { txs: d.txs, batches: d.batches || [], pendingDeleteTx: d.pendingDeleteTx || [], pendingDeleteBatch: d.pendingDeleteBatch || [], running: d.running || null, runningDirty: !!d.runningDirty, bkMap: d.bkMap || {}, prices: d.prices || {}, pricesDirty: !!d.pricesDirty, brand: d.brand || {}, brandDirty: !!d.brandDirty, units: d.units || {}, unitsDirty: !!d.unitsDirty, hist: d.hist || [], cont: d.cont || { list: [], map: {} }, contDirty: !!d.contDirty };
     } catch (e) {}
-    return { txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false, brand: {}, brandDirty: false, units: {}, unitsDirty: false, hist: [] };
+    return { txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false, brand: {}, brandDirty: false, units: {}, unitsDirty: false, hist: [], cont: { list: [], map: {} }, contDirty: false };
 }
 let db = loadDb();
 let state = compute(db.txs, db.batches);
@@ -523,6 +523,7 @@ function viewHome() {
             <button onclick="window.print()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-print mr-1"></i>প্রিন্ট / PDF</button>
             <button onclick="doLogout()" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-right-from-bracket mr-1"></i>লগআউট</button>
             <button onclick="importLegacy(true)" class="bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>পুরোনো ডাটা তুলুন</button>
+            <button onclick="openContainers()" class="col-span-2 bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-box-open mr-1"></i>পাত্র / বক্সের ওজন</button>
             <button onclick="openHistory()" class="col-span-2 bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i>সংশোধনের ইতিহাস</button>
             ${isStandalone() ? '' : '<button onclick="installApp()" class="col-span-2 bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-mobile-screen-button mr-1"></i>ফোনে অ্যাপ হিসেবে রাখুন' + (offlineReady() ? ' <span class="text-emerald-600 text-[10px]">(ইন্টারনেট ছাড়াও খুলবে ✓)</span>' : '') + '</button>'}
             <button onclick="openCsvImport()" class="col-span-2 bg-gray-100 hover:bg-gray-200 border rounded-lg py-2"><i class="fa-solid fa-file-csv mr-1"></i>CSV / এক্সেল থেকে স্টক আনুন</button>
@@ -647,6 +648,7 @@ function itemCard(it) {
             ${it.buys.length ? `<div><b class="text-gray-700 block mb-1">কেনার ইতিহাস ও গড় দরের পরিবর্তন</b>
                 <div class="border rounded-lg overflow-hidden"><table class="w-full text-[11px]"><thead class="bg-gray-50 text-gray-500"><tr><th class="p-1.5 text-left">তারিখ</th><th class="p-1.5 text-right">পরিমাণ</th><th class="p-1.5 text-right">${ub(it.name)} দর</th><th class="p-1.5 text-right">নতুন গড়</th></tr></thead>
                 <tbody class="divide-y">${it.buys.slice().reverse().map(b => `<tr><td class="p-1.5">${esc(b.date.split(' ')[0])}${b.type === 'OPENING' ? ' <span class="text-[9px] text-sky-700">(শুরু)</span>' : ''}</td><td class="p-1.5 text-right">${fg(b.g, it.name)}</td><td class="p-1.5 text-right">৳${fmt(b.price)}</td><td class="p-1.5 text-right font-bold">৳${fmt(b.avgAfter)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+            ${contOk(it.name) ? `<div class="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-lg p-2 no-print"><span class="font-bold text-gray-700 whitespace-nowrap">রাখার পাত্র</span><select onchange="setItemCont(decodeURIComponent('${encodeURIComponent(it.name)}'), this.value)" class="border rounded-lg p-1 text-xs font-semibold min-w-0"><option value="">পাত্র ছাড়া</option>${contList().map(c => `<option value="${esc(c.id)}" ${defCid(it.name) === c.id ? 'selected' : ''}>${esc(c.name)} • ${fmt(c.g, 0)} ${ul(it.name)}</option>`).join('')}</select><button onclick="openContainers()" class="text-emerald-700 underline text-[11px] whitespace-nowrap">পাত্র যোগ/বদল</button></div>` : ''}
             <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-2 no-print"><span class="font-bold text-gray-700">একক</span>${unitOf(it.name) === 'pcs' ? '<span class="text-gray-600">পিস (বদলানো যায় না)</span>' : `<select onchange="setUnit(decodeURIComponent('${encodeURIComponent(it.name)}'), this.value)" class="border rounded-lg p-1 text-xs font-semibold"><option value="kg" ${unitOf(it.name) === 'kg' ? 'selected' : ''}>কেজি / গ্রাম</option><option value="l" ${unitOf(it.name) === 'l' ? 'selected' : ''}>লিটার / মি.লি.</option></select>`}</div>
             <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2 no-print">
                 <div class="flex items-center gap-2"><label class="font-bold text-emerald-900 whitespace-nowrap">বিক্রয় মূল্য/${ub(it.name)}</label>
@@ -741,9 +743,10 @@ function sfItem(it, i) {
         <div class="flex items-center justify-between gap-2">
             <div><span class="font-bold text-gray-800 text-sm">${esc(it.name)}</span>${it.isMixed ? ' <span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">মিক্সড</span>' : ''}
                 <span class="text-[11px] text-gray-500 block">লেজারে আছে: <b class="text-amber-800">${fg(it.stock, it.name)}</b> • গড় ৳${fmt(it.avg)}/${ub(it.name)}</span></div>
-            <div class="w-32 shrink-0"><label class="block text-[10px] text-gray-600 text-center">মেপে পাওয়া (${ul(it.name)})</label>
-                <input id="sf-in-${i}" type="number" inputmode="decimal" step="any" value="${on ? esc(round(qout(it.name, it.stock), 2)) : v('meas')}" oninput="sfRow(${i},'meas',this.value)" class="${INP} !p-1.5 !text-xs" placeholder="খালি = বাদ">
-                <button id="sf-auto-${i}" onclick="sfAuto(${i})" class="${autoCls(on)}">${autoLbl(on)}</button></div>
+            <div class="w-32 shrink-0"><label class="block text-[10px] text-gray-600 text-center">${rowTare(it.name, r) > 0 ? 'পাত্রসহ মেপে পাওয়া' : 'মেপে পাওয়া'} (${ul(it.name)})</label>
+                <input id="sf-in-${i}" type="number" inputmode="decimal" step="any" value="${on ? esc(round(qout(it.name, it.stock) + rowTare(it.name, r), 2)) : v('meas')}" oninput="sfRow(${i},'meas',this.value)" class="${INP} !p-1.5 !text-xs" placeholder="খালি = বাদ">
+                <button id="sf-auto-${i}" onclick="sfAuto(${i})" class="${autoCls(on)}">${autoLbl(on)}</button>
+                ${contSelect(it.name, rowCid(it.name, r), `sfCont(decodeURIComponent('${encodeURIComponent(it.name)}'), this.value)`)}</div>
         </div>
         <div id="sf-res-${i}" class="text-[11px] mt-1.5"></div>
         <div id="sf-ext-${i}" class="hidden mt-1.5 bg-blue-50/70 border border-blue-100 rounded-lg p-2">
@@ -769,7 +772,7 @@ function sfAuto(i) {
     if (r.auto) { r.auto = false; r.meas = ''; }
     else {
         if (it.stock <= EPS) { toast('এই আইটেমের স্টক নেই'); return; }
-        r.auto = true; r.meas = String(round(qout(it.name, it.stock), 2)); r.soldG = ''; r.soldTk = '';
+        r.auto = true; r.meas = String(round(qout(it.name, it.stock) + rowTare(it.name, r), 2)); r.soldG = ''; r.soldTk = '';
     }
     saveDraft(); setVal('sf-in-' + i, r.meas);
     const b = el('sf-auto-' + i); if (b) { b.className = autoCls(!!r.auto); b.innerHTML = autoLbl(!!r.auto); }
@@ -781,7 +784,7 @@ function sfAutoAll() {
     all.forEach(it => {
         const r = bf.rows[it.name] || (bf.rows[it.name] = {});
         if (allOn) { r.auto = false; r.meas = ''; }
-        else { r.auto = true; r.meas = String(round(qout(it.name, it.stock), 2)); r.soldG = ''; r.soldTk = ''; }
+        else { r.auto = true; r.meas = String(round(qout(it.name, it.stock) + rowTare(it.name, r), 2)); r.soldG = ''; r.soldTk = ''; }
     });
     saveDraft(); render();
 }
@@ -791,7 +794,9 @@ function sfCompute() {
     state.items.forEach((it, i) => {
         const r = bf.rows[it.name] || {};
         if (r.meas === undefined || r.meas === '') return;
-        const meas = r.auto ? it.stock : qin(it.name, r.meas), diff = it.stock - meas;
+        const gross = qin(it.name, r.meas), tare = rowTare(it.name, r);
+        if (!r.auto && tare > 0 && gross + EPS < tare) errors.push(`${it.name}: পাত্রসহ ওজন (${fg(gross, it.name)}) পাত্রের ওজন (${fg(tare, it.name)}) এর চেয়ে কম`);
+        const meas = r.auto ? it.stock : Math.max(0, gross - tare), diff = it.stock - meas;
         let short = 0, gain = 0, soldG = 0, soldTk = 0, eatG = 0;
         if (diff > EPS) {
             short = diff; soldG = qin(it.name, r.soldG); soldTk = num(r.soldTk);
@@ -800,7 +805,7 @@ function sfCompute() {
         } else if (diff < -EPS) gain = -diff;
         const cEat = costNow(it, eatG), cSold = costNow(it, soldG);
         eatCost += cEat; soldRev += soldTk; soldCost += cSold;
-        rows.push({ i, name: it.name, meas, short, gain, soldG, soldTk, eatG, cEat, cSold });
+        rows.push({ i, name: it.name, meas, short, gain, soldG, soldTk, eatG, cEat, cSold, gross, tare: r.auto ? 0 : tare });
     });
     return { rows, errors, eatCost, soldRev, soldCost };
 }
@@ -813,9 +818,10 @@ function sfPreview() {
         const row = c.rows.find(r => r.i === i);
         if (!row) { res.innerHTML = ''; ext.classList.add('hidden'); return; }
         ext.classList.toggle('hidden', !(row.short > EPS));
-        if (row.short > EPS) res.innerHTML = `<span class="text-rose-600 font-semibold">কম: ${fg(row.short, row.name)}</span>${row.soldG > 0 ? ' • বিক্রি ' + fg(row.soldG, row.name) : ''} • <b class="text-rose-700">খাওয়া/ঘাটতি ${fg(row.eatG, row.name)} (${tk(row.cEat)})</b>`;
-        else if (row.gain > EPS) res.innerHTML = `<span class="text-amber-700">মাপা পরিমাণ ${fg(row.gain, row.name)} বেশি, স্টক ঠিক করা হবে (লাভে প্রভাব নেই)</span>`;
-        else res.innerHTML = '<span class="text-emerald-700 font-semibold">ঠিক আছে ✓</span>';
+        const tp = row.tare > 0 ? `<span class="text-gray-500">পাত্রসহ ${fg(row.gross, row.name)} − পাত্র ${fg(row.tare, row.name)} = <b>${fg(row.meas, row.name)}</b> • </span>` : '';
+        if (row.short > EPS) res.innerHTML = tp + `<span class="text-rose-600 font-semibold">কম: ${fg(row.short, row.name)}</span>${row.soldG > 0 ? ' • বিক্রি ' + fg(row.soldG, row.name) : ''} • <b class="text-rose-700">খাওয়া/ঘাটতি ${fg(row.eatG, row.name)} (${tk(row.cEat)})</b>`;
+        else if (row.gain > EPS) res.innerHTML = tp + `<span class="text-amber-700">মাপা পরিমাণ ${fg(row.gain, row.name)} বেশি, স্টক ঠিক করা হবে (লাভে প্রভাব নেই)</span>`;
+        else res.innerHTML = tp + '<span class="text-emerald-700 font-semibold">ঠিক আছে ✓</span>';
     });
     setHtml('sf-summary', `
         ${row2('মাপা আইটেম', c.rows.length + 'টি')}
@@ -837,7 +843,7 @@ function sfSave() { if (!canWrite()) return;
     const items = {}, mm = {}, pushS = t => { t.grp = 's'; db.txs.push(t); };   // grp 's' = ব্যাচ শুরুর ওজন-সংশোধন, পরে সম্পাদনায় লাগে
     c.rows.forEach(r => {
         items[r.name] = r.meas;
-        mm[r.name] = { before: round(r.meas + r.short - r.gain, 3), start: r.meas, soldG: r.soldG || 0, soldTk: r.soldTk || 0 };
+        mm[r.name] = { before: round(r.meas + r.short - r.gain, 3), start: r.meas, soldG: r.soldG || 0, soldTk: r.soldTk || 0, cid: rowCid(r.name, bf.rows[r.name]) };
         if (r.soldG > 0) pushS(makeTx('BULK', r.name, r.soldG, 0, r.soldTk, bid, 'ব্যাচের আগে কম পাওয়া অংশ থেকে বিক্রি', now + (k++)));
         if (r.eatG > EPS) pushS(makeTx('EAT', r.name, r.eatG, 0, r.cEat, bid, 'অটো ঘাটতি (ব্যাচের আগে ওজন মেপে)', now + (k++)));
         if (r.gain > EPS) pushS(makeTx('ADJUST_IN', r.name, r.gain, 0, 0, bid, 'মাপা ওজন বেশি, স্টক সংশোধন', now + (k++)));
@@ -895,8 +901,9 @@ function ffItem(it, i) {
             <div><span class="font-bold text-gray-800 text-sm">${esc(it.name)}</span>${it.isMixed ? ' <span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">মিক্সড</span>' : ''}
                 <span class="text-[11px] text-gray-500 block">শুরুতে মাপা: <b>${fg(startMeas, it.name)}</b> • এখন লেজারে: <b class="text-amber-800">${fg(it.stock, it.name)}</b> • গড় ৳${fmt(it.avg)}/${ub(it.name)}</span>
                 ${Math.abs(it.stock - startMeas) > 0.5 ? `<span class="text-[10px] text-purple-700 block">শুরুর পর ${it.stock > startMeas ? '+' : '-'}${fg(Math.abs(it.stock - startMeas), it.name)} ${it.stock > startMeas ? 'যোগ হয়েছে (নতুন ব্লেন্ড/কেনা)' : 'কমেছে'}, হিসাবে ধরা আছে</span>` : ''}</div>
-            <div class="w-28 shrink-0"><label class="block text-[10px] text-gray-600 text-center">শেষের পরিমাণ (${ul(it.name)})</label>
-                <input type="number" inputmode="decimal" step="any" value="${esc(r.end === undefined ? '' : r.end)}" oninput="ffRow(${i},this.value)" class="${INP} !p-1.5 !text-xs text-amber-900" placeholder="খালি = ব্যবহার হয়নি"></div>
+            <div class="w-28 shrink-0"><label class="block text-[10px] text-gray-600 text-center">${tareOfCid(ffCid(it.name, r)) > 0 ? 'পাত্রসহ শেষের পরিমাণ' : 'শেষের পরিমাণ'} (${ul(it.name)})</label>
+                <input type="number" inputmode="decimal" step="any" value="${esc(r.end === undefined ? '' : r.end)}" oninput="ffRow(${i},this.value)" class="${INP} !p-1.5 !text-xs text-amber-900" placeholder="খালি = ব্যবহার হয়নি">
+                ${contSelect(it.name, ffCid(it.name, r), `ffCont(decodeURIComponent('${encodeURIComponent(it.name)}'), this.value)`)}</div>
         </div>
         <div id="ff-res-${i}" class="text-[11px] mt-1.5"></div>
     </div>`;
@@ -912,11 +919,13 @@ function ffCompute() {
     list.forEach((it, i) => {
         const r = bf.rows[it.name] || {};
         if (r.end === undefined || r.end === '') { skipped.push(i); return; }
-        const end = qin(it.name, r.end), used = it.stock - end;
+        const gross = qin(it.name, r.end), tare = tareOfCid(ffCid(it.name, r));
+        if (tare > 0 && gross + EPS < tare) { errors.push(`${it.name}: পাত্রসহ ওজন (${fg(gross, it.name)}) পাত্রের ওজন (${fg(tare, it.name)}) এর চেয়ে কম`); return; }
+        const end = Math.max(0, gross - tare), used = it.stock - end;
         if (used < -EPS) { errors.push(`${it.name}: শেষের পরিমাণ (${fg(end, it.name)}) এখনকার স্টক ${fg(it.stock, it.name)} এর চেয়ে বেশি হতে পারে না`); return; }
         const u = Math.max(0, used), c = costNow(it, u);
         pktCost += c; replCost += u / 1000 * it.repl;
-        rows.push({ i, name: it.name, end, used: u, cost: c });
+        rows.push({ i, name: it.name, end, used: u, cost: c, gross, tare });
     });
     if (sold > P + EPS) errors.push(`বিক্রি (${fmt(sold, 0)}) প্যাকেট সংখ্যার (${fmt(P, 0)}) চেয়ে বেশি হতে পারে না`);
     const a = (run && state.byRef[run.id]) || emptyAgg();
@@ -935,7 +944,7 @@ function ffPreview() {
     list.forEach((it, i) => {
         const res = el('ff-res-' + i); if (!res) return;
         const row = c.rows.find(r => r.i === i);
-        res.innerHTML = row ? `প্যাকেটে খরচ: <b class="text-blue-700">${fg(row.used, row.name)}</b> • খরচ <b class="text-emerald-700">${tk(row.cost)}</b>` : '';
+        res.innerHTML = row ? (row.tare > 0 ? `<span class="text-gray-500">পাত্রসহ ${fg(row.gross, row.name)} − পাত্র ${fg(row.tare, row.name)} = <b>${fg(row.end, row.name)}</b> • </span>` : '') + `প্যাকেটে খরচ: <b class="text-blue-700">${fg(row.used, row.name)}</b> • খরচ <b class="text-emerald-700">${tk(row.cost)}</b>` : '';
     });
     setHtml('ff-summary', `
         ${row2('প্যাকেটে কাঁচামাল খরচ', tk(c.pktCost))}
@@ -1186,7 +1195,49 @@ function installApp() {
         <p class="text-gray-600">অ্যাপ হিসেবে রাখলে হোম স্ক্রিনে আইকন থাকবে, পুরো পর্দায় খুলবে এবং ইন্টারনেট ছাড়াও খোলা যাবে।</p>
         <div class="border rounded-lg p-2"><b>অ্যান্ড্রয়েড (Chrome)</b><br>ওপরে ডানে তিন-ডট (⋮) মেনু → <b>"অ্যাপ ইনস্টল করুন"</b> বা <b>"হোম স্ক্রিনে যোগ করুন"</b> চাপুন।</div>
         <div class="border rounded-lg p-2"><b>আইফোন (Safari)</b><br>Safari-তে এই পাতা খুলে নিচের <b>শেয়ার (⬆)</b> বাটন → <b>"Add to Home Screen"</b> চাপুন। (Chrome থেকে হবে না, Safari লাগবে।)</div>
-        <p class="text-[11px] text-gray-500">আগে একবার ইন্টারনেট চালু রেখে অ্যাপটা পুরো খুলে নিন, তাহলে পরে ইন্টারনেট ছাড়াও খুলবে।</p>`);
+        <p class="text-[11px] text-gray-500">আগে একবার ইন্টারনেট চালু রেখে অ্যাপটা পুরো খুলে নিন, তাহলে পরে ইন্টারনেট ছাড়াও খুলবে।</p>
+        <button onclick="pwaCheck()" class="w-full bg-emerald-600 text-white font-bold rounded-xl py-2.5"><i class="fa-solid fa-stethoscope mr-1.5"></i>ইনস্টল হচ্ছে না? পরীক্ষা চালান</button>`);
+}
+// ইনস্টল কেন হচ্ছে না: ফোনেই এক এক করে যাচাই
+async function pwaCheck() {
+    openModal('<i class="fa-solid fa-stethoscope text-emerald-600 mr-1.5"></i>ইনস্টল পরীক্ষা', '<p class="text-gray-500">পরীক্ষা চলছে...</p>');
+    const rows = [], add = (ok, label, hint) => rows.push({ ok, label, hint });
+    const ua = navigator.userAgent || '';
+    const inApp = inAppBrowser(), desktopMode = !/Mobile|Android|iPhone|iPad/i.test(ua) && (navigator.maxTouchPoints || 0) > 1, isChrome = /Chrome\//.test(ua) && !/EdgA|OPR|SamsungBrowser|FBAN|FBAV/.test(ua);
+    add(location.protocol === 'https:' || location.hostname === 'localhost', 'নিরাপদ (https) ঠিকানা', 'ঠিকানা https:// দিয়ে শুরু হতে হবে');
+    add(!inApp, 'সাধারণ ব্রাউজারে খোলা (ফেসবুক/মেসেঞ্জারের ভেতরের নয়)', 'ভেতরের ব্রাউজারে ইনস্টল হয় না। ⋮ মেনু থেকে Chrome-এ খুলুন।');
+    add(!desktopMode, 'মোবাইল সাইট মোডে আছে (Desktop site বন্ধ)', 'Chrome-এর ⋮ মেনুতে "Desktop site" টিক তুলে দিয়ে পাতা রিফ্রেশ দিন।');
+    add(isChrome, 'ব্রাউজার Chrome', 'অন্য ব্রাউজারে (যেমন Samsung Internet, Opera) ইনস্টলের মেনুর নাম আলাদা হতে পারে। Chrome চেষ্টা করুন।');
+    let man = null, murl = '';
+    try {
+        const link = document.querySelector('link[rel="manifest"]'); murl = link ? link.href : new URL('manifest.json', location.href).href;
+        add(!!link, 'পাতায় manifest লিংক আছে', 'index-cloud.html নতুনটা আপলোড করুন এবং হার্ড রিফ্রেশ দিন');
+        const r = await fetch(murl, { cache: 'no-store' });
+        add(r.ok, 'manifest.json ফাইল খোলা যাচ্ছে (' + r.status + ')', 'GitHub-এ index-cloud.html এর পাশে manifest.json আপলোড করুন');
+        if (r.ok) { try { man = await r.json(); } catch (e) { add(false, 'manifest.json পড়া যায়নি', 'ফাইলটা আবার আপলোড করুন, লেখা ঠিক আছে কি দেখুন'); } }
+    } catch (e) { add(false, 'manifest.json আনা যায়নি', 'ইন্টারনেট ও ফাইলের নাম/ফোল্ডার দেখুন'); }
+    if (man) {
+        add(!!(man.name || man.short_name), 'অ্যাপের নাম আছে');
+        add(!!man.start_url && /standalone|fullscreen|minimal-ui/.test(man.display || ''), 'start_url ও display ঠিক আছে');
+        const icons = man.icons || [], sz = icons.map(i => i.sizes);
+        add(sz.includes('192x192') && sz.includes('512x512'), '১৯২ ও ৫১২ আকারের আইকন ঘোষণা করা আছে');
+        for (const ic of icons) {
+            try { const r = await fetch(new URL(ic.src, murl).href, { cache: 'no-store' }); add(r.ok && /image/.test(r.headers.get('content-type') || ''), 'আইকন ' + ic.src + ' খোলা যাচ্ছে (' + r.status + ')', 'GitHub-এ ' + ic.src + ' আপলোড করুন'); }
+            catch (e) { add(false, 'আইকন ' + ic.src + ' আনা যায়নি', 'ফাইলটা আপলোড করুন'); }
+        }
+    }
+    if (!('serviceWorker' in navigator)) add(false, 'এই ব্রাউজারে সার্ভিস ওয়ার্কার নেই', 'Chrome ব্যবহার করুন এবং https ঠিকানা দিয়ে খুলুন');
+    else {
+        try { const r = await fetch(new URL('sw.js', location.href).href, { cache: 'no-store' }); add(r.ok, 'sw.js ফাইল খোলা যাচ্ছে (' + r.status + ')', 'GitHub-এ index-cloud.html এর পাশে sw.js আপলোড করুন'); } catch (e) { add(false, 'sw.js আনা যায়নি', 'ফাইলের নাম ও ফোল্ডার দেখুন'); }
+        try { const reg = await navigator.serviceWorker.getRegistration(); add(!!reg, 'সার্ভিস ওয়ার্কার নিবন্ধিত', 'sw.js আপলোডের পর পাতা রিফ্রেশ দিয়ে ১০ সেকেন্ড অপেক্ষা করে আবার পরীক্ষা করুন'); add(!!(reg && reg.active), 'সার্ভিস ওয়ার্কার চালু'); } catch (e) { add(false, 'সার্ভিস ওয়ার্কার যাচাই করা যায়নি', String(e && e.message || e)); }
+        add(!!navigator.serviceWorker.controller, 'এই পাতা সার্ভিস ওয়ার্কারের নিয়ন্ত্রণে', 'পাতাটা একবার রিফ্রেশ দিন');
+    }
+    add(!isStandalone(), 'অ্যাপটা এখনো ইনস্টল করা নেই', 'আগেই ইনস্টল হয়ে থাকলে হোম স্ক্রিনের আইকন থেকে খুলুন');
+    add(!!installEv, 'ব্রাউজার ইনস্টলের অনুমতি দিয়েছে', 'ওপরের সবগুলো ঠিক থাকলেও এটা না হলে: ছদ্মবেশী (Incognito) মোড বন্ধ করুন, পাতা রিফ্রেশ দিন, আর ⋮ মেনুতে "অ্যাপ ইনস্টল করুন" বা "হোম স্ক্রিনে যোগ করুন" আছে কি দেখুন');
+    const bad = rows.filter(r => !r.ok);
+    el('modal-body').innerHTML = `<div class="font-bold ${bad.length ? 'text-red-600' : 'text-emerald-700'}">${bad.length ? bad.length + 'টি সমস্যা পাওয়া গেছে' : 'সব ঠিক আছে'}</div>
+        <div class="space-y-1">${rows.map(r => `<div class="border rounded-lg p-2 ${r.ok ? 'bg-emerald-50' : 'bg-red-50'}"><div class="${r.ok ? 'text-emerald-800' : 'text-red-700 font-bold'}">${r.ok ? '✓' : '✗'} ${esc(r.label)}</div>${!r.ok && r.hint ? '<div class="text-[11px] text-gray-600 mt-0.5">→ ' + esc(r.hint) + '</div>' : ''}</div>`).join('')}</div>
+        <p class="text-[11px] text-gray-500">ফাইলগুলো নিজে খুলে দেখতে: <a class="underline text-emerald-700" href="manifest.json" target="_blank">manifest.json</a> • <a class="underline text-emerald-700" href="sw.js" target="_blank">sw.js</a> • <a class="underline text-emerald-700" href="icon-192.png" target="_blank">icon-192.png</a> (খুললে লেখা/ছবি আসা উচিত, "404" নয়)</p>`;
 }
 function installHint() {
     if (DEMO || isStandalone() || !installEv || localStorage.getItem('sbx_installhint')) return '';
@@ -1205,6 +1256,66 @@ function openHistory(ref) {
     const all = (db.hist || []).filter(h => !ref || h.ref === ref).sort((a, b) => b.ts - a.ts), list = all.slice(0, 80);
     const chip = a => a === 'delete' ? ['bg-red-100 text-red-700', 'মোছা'] : a === 'add' ? ['bg-emerald-100 text-emerald-700', 'যোগ'] : a === 'auto' ? ['bg-sky-100 text-sky-700', 'অটো মেলানো'] : ['bg-amber-100 text-amber-800', 'সংশোধন'];
     openModal('<i class="fa-solid fa-clock-rotate-left text-amber-600 mr-1.5"></i>' + (ref ? 'এই এন্ট্রির ইতিহাস' : 'সংশোধনের ইতিহাস'), list.length ? `<p class="text-[11px] text-gray-500">সবচেয়ে নতুন আগে${all.length > list.length ? ' (শেষ ' + list.length + 'টি)' : ''}। এখানে শুধু দেখা যায়, বদলানো বা মোছা যায় না।</p>` + list.map(h => { const c = chip(h.act); return `<div class="border rounded-lg p-2"><div class="flex justify-between items-center"><span class="text-[10px] text-gray-500">${esc(dateStr(h.ts))}</span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${c[0]}">${c[1]}</span></div><div class="font-bold text-gray-800 mt-0.5">${esc(h.title)}</div>${(h.ch || []).map(x => `<div class="text-[11px] text-gray-600">${esc(x[0])}: ${x[1] && x[1] !== '—' ? '<span class="line-through text-gray-400">' + esc(x[1]) + '</span> → ' : ''}<b>${esc(x[2] || '—')}</b></div>`).join('')}</div>`; }).join('') : '<p class="text-gray-500 text-center py-6">কোনো সংশোধনের ইতিহাস নেই</p>');
+}
+
+// ---------- পাত্র/বক্সের ওজন (টেয়ার): পাত্রসহ ওজন লিখলে পাত্র নিজে বাদ যায় ----------
+const contList = () => (db.cont && db.cont.list) || [];
+const tareOfCid = cid => { const c = contList().find(x => x.id === cid); return c ? num(c.g) : 0; };
+const defCid = name => (db.cont && db.cont.map && db.cont.map[name]) || '';
+const contOk = name => unitOf(name) !== 'pcs';
+// শুরুর ধাপে: এই সারিতে বেছে নেওয়া পাত্র (না বাছলে আইটেমের সাধারণ পাত্র)
+const rowCid = (name, r) => !contOk(name) ? '' : (r && r.cid !== undefined ? r.cid : defCid(name));
+const rowTare = (name, r) => tareOfCid(rowCid(name, r));
+// শেষের ধাপে: না বাছলে শুরুতে যে পাত্র ছিল সেটাই
+const ffCid = (name, r) => !contOk(name) ? '' : (r && r.cid !== undefined ? r.cid : ((db.running && db.running.m && db.running.m[name] && db.running.m[name].cid !== undefined) ? db.running.m[name].cid : defCid(name)));
+const contSelect = (name, cid, onchange) => contOk(name) && contList().length ? `<select onchange="${onchange}" class="w-full border rounded-lg p-1 text-[10px] mt-1 bg-white text-gray-700"><option value="">পাত্র ছাড়া মেপেছি</option>${contList().map(c => `<option value="${esc(c.id)}" ${c.id === cid ? 'selected' : ''}>${esc(c.name)} • ${fmt(c.g, 0)} ${ul(name)}</option>`).join('')}</select>` : '';
+function sfCont(name, cid) {
+    const r = bf.rows[name] || (bf.rows[name] = {}), it = state.map[name];
+    r.cid = cid;
+    if (r.auto && it) r.meas = String(round(qout(name, it.stock) + rowTare(name, r), 2));
+    saveDraft(); render();
+}
+function ffCont(name, cid) { const r = bf.rows[name] || (bf.rows[name] = {}); r.cid = cid; saveDraft(); render(); }
+function setItemCont(name, cid) {
+    if (!canWrite()) return;
+    db.cont = db.cont || { list: [], map: {} }; db.cont.map = db.cont.map || {};
+    if (cid) db.cont.map[name] = cid; else delete db.cont.map[name];
+    db.contDirty = true; refresh(); toast('পাত্র ঠিক করা হয়েছে');
+}
+let contDraft = [];
+function openContainers() {
+    if (!canWrite()) return;
+    contDraft = contList().map(c => Object.assign({}, c));
+    openModal('<i class="fa-solid fa-box-open text-emerald-600 mr-1.5"></i>পাত্র / বক্সের ওজন', `
+        <p class="text-gray-500">আপনি যে বক্স বা পাত্রে পণ্য রেখে ওজন মাপেন, তার নাম ও ওজন (গ্রাম/মি.লি. এককে, যেভাবে মাপেন) এখানে লিখে রাখুন। তারপর স্টক পাতায় আইটেম খুলে সেই আইটেম কোন পাত্রে রাখেন বেছে দিন। ব্যাচ শুরু ও শেষে পাত্রসহ ওজন লিখলে অ্যাপ নিজে পাত্রের ওজন বাদ দিয়ে আসল পরিমাণ ধরবে।</p>
+        <div id="ct-rows" class="space-y-2"></div>
+        <button onclick="contAdd()" class="text-emerald-700 font-bold text-xs"><i class="fa-solid fa-plus-circle mr-1"></i>নতুন পাত্র</button>
+        <p class="text-[11px] text-gray-500">পাত্র বদলালে বা ওজন ঠিক করলে নতুন এন্ট্রি থেকে কাজ করবে; আগের সেভ হওয়া হিসাব বদলায় না।</p>
+        ${btnMain('contSave()', 'সেভ করুন', 'emerald')}`);
+    contRender();
+}
+function contRender() {
+    const c = el('ct-rows'); if (!c) return;
+    c.innerHTML = contDraft.length ? contDraft.map((x, i) => `<div class="grid grid-cols-12 gap-1.5 items-center border rounded-lg p-1.5 bg-gray-50">
+        <input class="col-span-6 ${INP_L} !p-1.5 !text-xs" value="${esc(x.name)}" placeholder="পাত্রের নাম" oninput="contDraft[${i}].name=this.value">
+        <input type="number" inputmode="decimal" class="col-span-5 ${INP} !p-1.5 !text-xs" value="${esc(x.g)}" placeholder="ওজন (g)" oninput="contDraft[${i}].g=this.value">
+        <button onclick="contDel(${i})" class="col-span-1 text-red-400 text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('') : '<p class="text-gray-400 text-center text-xs py-2">এখনো কোনো পাত্র নেই</p>';
+}
+function contAdd() { contDraft.push({ id: uid('c_'), name: '', g: '' }); contRender(); }
+function contDel(i) { contDraft.splice(i, 1); contRender(); }
+function contSave() {
+    if (!canWrite()) return;
+    const list = contDraft.filter(x => String(x.name || '').trim()).map(x => ({ id: x.id, name: String(x.name).trim(), g: round(num(x.g), 3) }));
+    if (new Set(list.map(x => x.name)).size !== list.length) { alert('একই নামে একাধিক পাত্র আছে'); return; }
+    if (list.some(x => x.g < 0)) { alert('ওজন ঠিকমতো লিখুন'); return; }
+    const old = contList();
+    list.forEach(x => { const o = old.find(y => y.id === x.id); if (!o) logHist('add', 'cont', x.id, 'নতুন পাত্র: ' + x.name, [['ওজন', '—', fmt(x.g, 1) + ' g']]); else if (o.g !== x.g || o.name !== x.name) logHist('edit', 'cont', x.id, 'পাত্র সংশোধন: ' + x.name, [['ওজন', fmt(o.g, 1) + ' g', fmt(x.g, 1) + ' g']].concat(o.name !== x.name ? [['নাম', o.name, x.name]] : [])); });
+    old.filter(o => !list.some(x => x.id === o.id)).forEach(o => logHist('delete', 'cont', o.id, 'পাত্র মোছা: ' + o.name, [['ওজন ছিল', fmt(o.g, 1) + ' g', '—']]));
+    db.cont = db.cont || { list: [], map: {} };
+    const ids = new Set(list.map(x => x.id)); db.cont.map = db.cont.map || {};
+    Object.keys(db.cont.map).forEach(k => { if (!ids.has(db.cont.map[k])) delete db.cont.map[k]; });
+    db.cont.list = list; db.contDirty = true;
+    closeModal(); refresh(); toast('পাত্রের তালিকা সেভ হয়েছে');
 }
 function toggleItemOpen(n) { ui.itemOpen[n] = !ui.itemOpen[n]; render(); }
 function viewItemProfit() {
@@ -1517,6 +1628,7 @@ function openMeasEdit(bid, item) {
             <div><label class="block font-bold text-gray-700 mb-1">শুরুর মাপা পরিমাণ (${ul(item)})</label><input id="me-s" type="number" inputmode="decimal" oninput="measPrev()" value="${m.start === '' ? '' : esc(qout(item, m.start))}" class="${INP}"></div>
             <div><label class="block font-bold text-gray-700 mb-1">শেষের মাপা পরিমাণ (${ul(item)})</label><input id="me-e" type="number" inputmode="decimal" oninput="measPrev()" value="${m.end === null || m.end === undefined ? '' : esc(qout(item, m.end))}" class="${INP}" placeholder="ফাঁকা = ব্যবহার হয়নি"></div>
         </div>
+        ${contOk(item) && contList().length ? `<div><label class="block text-[11px] text-gray-600 mb-0.5">পাত্রসহ ওজন লিখলে পাত্র বেছে নিন (ইচ্ছাধীন, উপরের ঘরে পাত্রের ওজনসহ লিখুন)</label><select id="me-c" onchange="measPrev()" class="w-full border rounded-lg p-1.5 text-xs bg-white"><option value="">পাত্র ছাড়া (আসল পরিমাণ লিখেছি)</option>${contList().map(c => `<option value="${esc(c.id)}">${esc(c.name)} • ${fmt(c.g, 0)} ${ul(item)}</option>`).join('')}</select></div>` : ''}
         <div id="me-prev" class="bg-amber-50 border border-amber-100 rounded-xl p-2.5 space-y-1"></div>
         <input type="hidden" id="me-a" value="${esc(m.added || 0)}"><input type="hidden" id="me-id" value="${esc(bid)}"><input type="hidden" id="me-item" value="${esc(item)}"><input type="hidden" id="me-b" value="${esc(m.before)}">
         ${btnMain('measEditSave()', 'সংশোধন সেভ করুন', 'amber')}`);
@@ -1526,7 +1638,8 @@ function measPrev() {
     const pv = el('me-prev'); if (!pv) return;
     const itn = el('me-item').value, before = num(el('me-b').value), sv = el('me-s').value, ev = el('me-e').value;
     if (sv === '') { pv.innerHTML = '<span class="text-gray-500">শুরুর পরিমাণ লিখুন</span>'; return; }
-    const S = qin(itn, sv), added = num(el('me-a') ? el('me-a').value : 0), diff = before - S, hasE = ev !== '', E = qin(itn, ev), used = hasE ? S + added - E : 0;
+    const mtr = el('me-c') ? tareOfCid(el('me-c').value) : 0;
+    const S = Math.max(0, qin(itn, sv) - mtr), added = num(el('me-a') ? el('me-a').value : 0), diff = before - S, hasE = ev !== '', E = Math.max(0, qin(itn, ev) - mtr), used = hasE ? S + added - E : 0;
     pv.innerHTML = `${row2('শুরুতে ' + (diff > EPS ? 'ঘাটতি' : diff < -EPS ? 'বাড়তি' : 'ঠিক'), fg(Math.abs(diff), itn))}${row2(added ? 'ব্যবহার (শুরু + মাঝে যোগ − শেষ)' : 'ব্যবহার (শুরু − শেষ)', hasE ? fg(used, itn) : 'শেষ পরিমাণ লেখা হয়নি')}${hasE && E > S + added + EPS ? '<div class="text-red-600">শেষের পরিমাণ শুরুর পরিমাণের চেয়ে বেশি হতে পারে না</div>' : ''}`;
 }
 // ব্যাচ শুরুর ওজন-মেলানো এন্ট্রি (ঘাটতি / ঘাটতি থেকে বিক্রি / বাড়তি) বানায়
@@ -1577,7 +1690,9 @@ function measEditSave() {
     const sv = el('me-s').value, ev = el('me-e').value;
     if (sv === '') { alert('শুরুর মাপা পরিমাণ লিখুন'); return; }
     if (intBad(unitOf(item), sv) || intBad(unitOf(item), ev)) return;
-    const S = round(qin(item, sv), 3), hasE = ev !== '', E = hasE ? round(qin(item, ev), 3) : null;
+    const mtr = el('me-c') ? tareOfCid(el('me-c').value) : 0;
+    if (mtr > 0 && (qin(item, sv) + EPS < mtr || (ev !== '' && qin(item, ev) + EPS < mtr))) { alert('পাত্রসহ ওজন পাত্রের ওজনের (' + fg(mtr, item) + ') চেয়ে কম হতে পারে না'); return; }
+    const S = round(Math.max(0, qin(item, sv) - mtr), 3), hasE = ev !== '', E = hasE ? round(Math.max(0, qin(item, ev) - mtr), 3) : null;
     if (S < 0) { alert('শুরুর পরিমাণ ঠিকমতো লিখুন'); return; }
     if (hasE && (E < 0 || E > S + (((b.meas || {})[item] || {}).added || 0) + EPS)) { alert('শেষের পরিমাণ শুরুর পরিমাণ (ও মাঝে যোগ হওয়া অংশ) এর চেয়ে বেশি হতে পারে না'); return; }
     const before = round(stockAt(item, b.ts), 3);   // ব্যাচ শুরুর সময় সিস্টেমে আসলে কত ছিল (সবসময় নতুন করে হিসাব)
@@ -2036,7 +2151,7 @@ let FB = null, FBp = null, authStarted = false, unsubs = [], lastErr = null, las
 let retryN = 0, syncing = false, syncAgain = false, syncTimer = null;
 const queued = {}, inflight = new Set();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const emptyDb = () => ({ txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false, brand: {}, brandDirty: false, units: {}, unitsDirty: false, hist: [] });
+const emptyDb = () => ({ txs: [], batches: [], pendingDeleteTx: [], pendingDeleteBatch: [], running: null, runningDirty: false, bkMap: {}, prices: {}, pricesDirty: false, brand: {}, brandDirty: false, units: {}, unitsDirty: false, hist: [], cont: { list: [], map: {} }, contDirty: false });
 function canon(o) {
     if (Array.isArray(o)) return '[' + o.map(canon).join(',') + ']';
     if (o && typeof o === 'object') return '{' + Object.keys(o).filter(k => o[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canon(o[k])).join(',') + '}';
@@ -2045,7 +2160,7 @@ function canon(o) {
 const plain = o => { const c = JSON.parse(JSON.stringify(o)); delete c.synced; delete c._sat; return c; };
 function renderSoon() { clearTimeout(renderT); renderT = setTimeout(render, 150); }
 
-function pendingCount() { return db.txs.filter(t => !t.synced).length + db.batches.filter(b => !b.synced).length + db.pendingDeleteTx.length + db.pendingDeleteBatch.length + (db.runningDirty ? 1 : 0) + (db.pricesDirty ? 1 : 0) + (db.brandDirty ? 1 : 0) + (db.unitsDirty ? 1 : 0) + (db.hist || []).filter(h => !h.synced).length; }
+function pendingCount() { return db.txs.filter(t => !t.synced).length + db.batches.filter(b => !b.synced).length + db.pendingDeleteTx.length + db.pendingDeleteBatch.length + (db.runningDirty ? 1 : 0) + (db.pricesDirty ? 1 : 0) + (db.brandDirty ? 1 : 0) + (db.unitsDirty ? 1 : 0) + (db.hist || []).filter(h => !h.synced).length + (db.contDirty ? 1 : 0); }
 function sig() { return db.txs.map(t => t.id).join(',') + '#' + db.batches.map(b => b.id).join(',') + '#' + (db.running ? db.running.id : ''); }
 function updateBadge() {
     const ic = el('sync-icon'), tx = el('sync-text'); if (!ic) return;
@@ -2319,6 +2434,12 @@ function attachListeners() {
         if (canon(b) !== canon(db.brand || {})) { db.brand = b; finish(true); }
     }, onListenErr));
 
+    unsubs.push(f.onSnapshot(f.doc(fs, 'users', uid, 'meta', 'containers'), d => {
+        if (d.metadata.hasPendingWrites || !d.exists() || db.contDirty) return;
+        let c = { list: [], map: {} }; try { c = JSON.parse(d.data().c) || c; } catch (e) {}
+        if (canon(c) !== canon(db.cont || { list: [], map: {} })) { db.cont = c; finish(true); }
+    }, onListenErr));
+
     unsubs.push(f.onSnapshot(f.doc(fs, 'users', uid, 'meta', 'units'), d => {
         if (d.metadata.hasPendingWrites || !d.exists() || db.unitsDirty) return;
         let m = {}; try { m = JSON.parse(d.data().m) || {}; } catch (e) {}
@@ -2403,6 +2524,10 @@ async function pushPending(manual) {
     if (db.brandDirty) {
         const bj = JSON.stringify(db.brand || {}), key = 'brand', sg = 'b:' + bj;
         if (queued[key] !== sg) ops.push({ keys: { [key]: sg }, applies: [() => { if (db.brandDirty && JSON.stringify(db.brand || {}) === bj) db.brandDirty = false; }], ref: f.doc(fs, 'users', uid, 'meta', 'brand'), data: { b: bj, u: f.serverTimestamp() } });
+    }
+    if (db.contDirty) {
+        const cj = JSON.stringify(db.cont || { list: [], map: {} }), key = 'cont', sg = 'c:' + cj;
+        if (queued[key] !== sg) ops.push({ keys: { [key]: sg }, applies: [() => { if (db.contDirty && JSON.stringify(db.cont || { list: [], map: {} }) === cj) db.contDirty = false; }], ref: f.doc(fs, 'users', uid, 'meta', 'containers'), data: { c: cj, u: f.serverTimestamp() } });
     }
     const hu = (db.hist || []).filter(h => !h.synced);
     if (hu.length) {
