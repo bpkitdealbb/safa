@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- সাহায্যকারী ----------
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function isAdmin() {
+      return signedIn() && myEmail() == 'bpsujon0842@gmail.com';
+    }
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    function accessPath(email) {
+      return /databases/$(database)/documents/access/$(email);
+    }
+    // ট্রায়াল (তৈরির পর ৭ দিন) অথবা পেইড (until পর্যন্ত) চালু আছে কি না। get() একবারই ডাকা হয়।
+    function subOk(email) {
+      let a = get(accessPath(email)).data;
+      return (a.plan == 'trial' && a.createdAt + duration.value(7, 'd') > request.time)
+          || (a.plan == 'paid' && a.until > request.time);
+    }
+    function hasAccess() {
+      return isAdmin() || (signedIn() && subOk(myEmail()));
+    }
+    // এই অ্যাকাউন্টে সর্বোচ্চ কতজন স্টাফ (অ্যাডমিন বদলাতে পারে; না থাকলে ২)
+    function maxStaff() {
+      let a = get(accessPath(myEmail())).data;
+      return ('maxStaff' in a) ? a.maxStaff : 2;
+    }
+
+    // ---------- স্টাফ ----------
+    function staffPath() {
+      return /databases/$(database)/documents/staff/$(myEmail());
+    }
+    // স্টাফ কি এই মালিকের ডাটা পড়তে পারবে
+    function staffReadOk(owner) {
+      return get(staffPath()).data.owner == owner;
+    }
+    // স্টাফ কি লিখতে পারবে: 'edit' সব; 'entry' শুধু নতুন যোগ (isAppend); 'view' কিছুই না। মালিকের সাবস্ক্রিপশনও চালু থাকতে হবে।
+    function staffWriteOk(owner, isAppend) {
+      let s = get(staffPath()).data;
+      return s.owner == owner && subOk(s.ownerEmail)
+          && (s.role == 'edit' || (s.role == 'entry' && isAppend));
+    }
+    // আগের কোনো ঘর বদলায়নি বা মোছেনি, শুধু নতুন ঘর যোগ হয়েছে
+    function appendOnly() {
+      let d = resource.data.diff(request.resource.data);
+      return d.removedKeys().size() == 0 && d.changedKeys().hasOnly(['u']);
+    }
+
+    // ---------- মালিকের ডাটা: দৈনিক বাকেট ও ইতিহাস ----------
+    match /users/{userId}/d/{doc} {
+      allow read: if signedIn() && (isOwner(userId) || staffReadOk(userId));
+      allow create: if signedIn() && ((isOwner(userId) && hasAccess()) || (!isOwner(userId) && staffWriteOk(userId, true)));
+      allow update: if signedIn() && ((isOwner(userId) && hasAccess()) || (!isOwner(userId) && staffWriteOk(userId, appendOnly())));
+      allow delete: if signedIn() && ((isOwner(userId) && hasAccess()) || (!isOwner(userId) && staffWriteOk(userId, false)));
+    }
+    match /users/{userId}/h/{doc} {
+      allow read: if signedIn() && (isOwner(userId) || staffReadOk(userId));
+      allow create: if signedIn() && ((isOwner(userId) && hasAccess()) || (!isOwner(userId) && staffWriteOk(userId, true)));
+      allow update: if signedIn() && ((isOwner(userId) && hasAccess()) || (!isOwner(userId) && staffWriteOk(userId, appendOnly())));
+      allow delete: if signedIn() && ((isOwner(userId) && hasAccess()) || (!isOwner(userId) && staffWriteOk(userId, false)));
+    }
+
+    // ---------- মালিকের সেটিংস/চলমান ব্যাচ ----------
+    // running ও units: মালিক এবং এন্ট্রি/সংশোধন অনুমতির স্টাফ; staff ও schema: শুধু মালিক; বাকি (দাম, পাত্র, নাম-লোগো): মালিক লিখবে, স্টাফ পড়বে
+    match /users/{userId}/meta/{doc} {
+      allow read: if signedIn() && (isOwner(userId) || (doc != 'staff' && doc != 'schema' && staffReadOk(userId)));
+      allow write: if signedIn() && (
+        (isOwner(userId) && hasAccess() && (doc != 'staff' || request.resource.data.emails.size() <= maxStaff()))
+        || (!isOwner(userId) && (doc == 'running' || doc == 'units') && staffWriteOk(userId, true)));
+    }
+
+    // পুরোনো কাঠামো (শুধু একবার তোলার সময় মালিক পড়ে)
+    match /users/{userId}/tx/{doc} {
+      allow read: if signedIn() && isOwner(userId);
+    }
+    match /users/{userId}/batches/{doc} {
+      allow read: if signedIn() && isOwner(userId);
+    }
+
+    // ---------- অ্যাক্সেস তালিকা (ডকুমেন্ট আইডি = ছোট হাতের ইমেইল) ----------
+    match /access/{email} {
+      // ক্রেতা নিজেরটা; তার স্টাফ মালিকেরটা; অ্যাডমিন সবটা
+      allow read: if isAdmin() || (signedIn() && (myEmail() == email || get(staffPath()).data.ownerEmail == email));
+      // নতুন ক্রেতা শুধু নিজের জন্য ৭ দিনের ট্রায়াল তৈরি করতে পারে
+      allow create: if isAdmin() || (
+        signedIn()
+        && myEmail() == email
+        && request.resource.data.keys().hasOnly(['email', 'plan', 'createdAt'])
+        && request.resource.data.email == email
+        && request.resource.data.plan == 'trial'
+        && request.resource.data.createdAt == request.time
+      );
+      // মেয়াদ ও স্টাফ-সীমা বদলানো বা বন্ধ করা শুধু অ্যাডমিন
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- স্টাফের তালিকা (ডকুমেন্ট আইডি = স্টাফের ছোট হাতের ইমেইল) ----------
+    // পড়বে: স্টাফ নিজে, তার মালিক, অ্যাডমিন। লিখবে শুধু মালিক, এবং স্টাফ মালিকের তালিকায় (সীমার ভেতরে) থাকলে।
+    match /staff/{semail} {
+      allow read: if isAdmin() || (s.ignedIn() && (myEmail() == semail || resource.data.owner == request.auth.uid));
+      allow create, update: if signedIn() && hasAccess()
+        && (resource == null || resource.data.owner == request.auth.uid)
+        && request.resource.data.keys().hasOnly(['owner', 'ownerEmail', 'role', 'name', 'u'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.dataownerEmail == myEmail()
+        && request.resource.data.role in ['view', 'entry', 'edit']
+        && semail != myEmail()
+        && semail in getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/meta/staff).data.emails;
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
+    }
+
+    // ---------- প্রতিষ্ঠানের নাম ও ছোট লোগো (অ্যাডমিন তালিকায় দেখানোর জন্য) ----------
+    match /profiles/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid && hasAccess()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'thumb', 'u'])
+        && request.resource.data.email == myEmail();
+    }
+
+    // বাকি সবকিছু বন্ধ
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
