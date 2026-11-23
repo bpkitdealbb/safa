@@ -62,6 +62,26 @@
     </div>
 </header>
 
+<!-- হেডারের ঠিক নিচে স্থায়ী ছোট বারকোড স্ক্যান ভিউ -->
+<div id="global-scan-panel" class="hidden fixed top-[64px] left-0 right-0 z-[55] px-2 pt-1 no-print pointer-events-none">
+  <div class="max-w-2xl mx-auto rounded-xl border border-emerald-300 bg-white shadow-xl p-2 pointer-events-auto">
+    <div class="flex items-center justify-between mb-1">
+      <span class="text-xs font-bold text-emerald-800"><i class="fa-solid fa-barcode mr-1"></i>বারকোড স্ক্যান করুন</span>
+      <button onclick="saleStopCamera()" class="text-xs bg-gray-800 text-white rounded-md px-3 py-1"><i class="fa-solid fa-xmark mr-1"></i>বন্ধ</button>
+    </div>
+    <div id="global-scan-reader" class="w-full overflow-hidden rounded-lg"></div>
+    <p class="text-[10px] text-gray-500 text-center mt-1">বারকোডটি স্ক্যান বক্সের মাঝখানে ধরুন</p>
+  </div>
+</div>
+<style>
+  #global-scan-reader {height:104px !important; min-height:104px !important; overflow:hidden !important; position:relative !important;}
+  #global-scan-reader video {width:100% !important; height:104px !important; min-height:104px !important; max-height:104px !important; object-fit:cover !important;}
+  #global-scan-reader canvas {display:none !important;}
+  #global-scan-reader__dashboard_section_csr,
+  #global-scan-reader__header_message,
+  #global-scan-reader__status_span {display:none !important;}
+</style>
+
 <main id="view" class="max-w-2xl mx-auto px-3 pt-3"></main>
 
 <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30 no-print">
@@ -541,14 +561,31 @@ function saleSave(){if(!canWrite())return;if(!saleCart.length){toast('আগে 
 function saleCollect(id){if(!canWrite())return;const rows=db.txs.filter(t=>t.id===id||t.saleId===id),group=rows.length?rows:db.txs.filter(t=>t.saleId===db.txs.find(x=>x.id===id)?.saleId);if(!group.length)return;const sid=group[0].saleId||group[0].id,all=db.txs.filter(t=>t.saleId===sid),total=num(all[0].saleTotal),paid=num(all[0].salePaid),due=total-paid;if(due<=0){toast('কোনো বাকি নেই');return;}openModal('বাকি টাকা আদায়',`<p>কাস্টমার: <b>${esc(all[0].saleCustomer||'নাম নেই')}</b></p><p>মোট ${tk(total)} • জমা ${tk(paid)} • বাকি ${tk(due)}</p><label class="font-bold">এখন কত টাকা দিলেন?</label><input id="sale-collect-amount" type="number" min="0.01" max="${due}" value="${due}" class="${INP}"><button onclick="saleCollectSave('${sid}')" class="w-full bg-emerald-600 text-white font-bold rounded-lg py-2.5">আদায় সেভ করুন</button>`);}
 function saleCollectSave(sid){if(!canWrite())return;const amt=num(el('sale-collect-amount').value),rows=db.txs.filter(t=>t.saleId===sid);if(!rows.length)return;const total=num(rows[0].saleTotal),paid=num(rows[0].salePaid),due=total-paid;if(!(amt>0)||amt>due+0.001){alert('সঠিক আদায়ের পরিমাণ দিন');return;}rows.forEach(t=>{t.salePaid=round(paid+amt,2);t.synced=false;});logHist('edit','sale',sid,'বাকি টাকা আদায়',[['জমা',tk(paid),tk(paid+amt)]]);closeModal();refresh();toast('বাকি আদায় সেভ হয়েছে');}
 function openGlobalSaleScanner(){
-    // অন্য সেকশনে থাকলেও আগে POS খুলবে, তারপর ক্যামেরা স্ক্যানার চালু করবে।
-    if(ui.tab!=='sales'){goTab('sales');}
-    const launch=()=>{if(el('sale-camera'))saleStartCamera();else toast('বিক্রির পাতা প্রস্তুত হচ্ছে, আবার ক্যামেরা আইকনে চাপ দিন');};
-    requestAnimationFrame(()=>setTimeout(launch,80));
+    // স্ক্যানার হেডারের নিচে স্থায়ী ছোট প্যানেলে খুলবে; POS-এ নিয়ে যাবে না যতক্ষণ না স্ক্যান হয়।
+    const panel=el('global-scan-panel');
+    if(panel)panel.classList.remove('hidden');
+    saleStartCamera();
 }
 
-async function saleStartCamera(){if(!navigator.mediaDevices?.getUserMedia){toast('এই ব্রাউজারে ক্যামেরা স্ক্যান সমর্থিত নয়');return;}try{if(!window.Html5Qrcode){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}const box=el('sale-camera');box.classList.remove('hidden');box.innerHTML='<div id="sale-reader" class="w-full"></div><button onclick="saleStopCamera()" class="mt-2 w-full bg-gray-700 text-white rounded-lg py-2">ক্যামেরা বন্ধ</button>';saleScanner=new Html5Qrcode('sale-reader');await saleScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:140}},code=>{saleStopCamera();saleScanCode(code);},()=>{});}catch(e){toast('ক্যামেরা চালু হয়নি: অনুমতি দিন এবং HTTPS ব্যবহার করুন');saleStopCamera();}}
-async function saleStopCamera(){if(saleScanner){try{await saleScanner.stop();}catch(e){}try{saleScanner.clear();}catch(e){}saleScanner=null;}const box=el('sale-camera');if(box){box.classList.add('hidden');box.innerHTML='';}}
+async function saleStartCamera(){
+ if(!navigator.mediaDevices?.getUserMedia){toast('এই ব্রাউজারে ক্যামেরা স্ক্যান সমর্থিত নয়');saleStopCamera();return;}
+ try{
+  if(!window.Html5Qrcode){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}
+  const panel=el('global-scan-panel'); if(panel)panel.classList.remove('hidden');
+  saleScanner=new Html5Qrcode('global-scan-reader',{verbose:false});
+  await saleScanner.start({facingMode:'environment'},{fps:12,qrbox:{width:Math.min(300,Math.max(220,window.innerWidth-70)),height:72},aspectRatio:2.8},async code=>{
+    await saleStopCamera();
+    // স্ক্যান সম্পন্ন হলে POS খুলে পণ্য কার্টে যোগ হবে।
+    if(ui.tab!=='sales')goTab('sales');
+    requestAnimationFrame(()=>setTimeout(()=>saleScanCode(code),100));
+  },()=>{});
+ }catch(e){console.warn('Barcode camera error',e);toast('ক্যামেরা চালু হয়নি: HTTPS ও ক্যামেরা অনুমতি পরীক্ষা করুন');await saleStopCamera();}
+}
+async function saleStopCamera(){
+ if(saleScanner){try{await saleScanner.stop();}catch(e){}try{saleScanner.clear();}catch(e){}saleScanner=null;}
+ const panel=el('global-scan-panel');if(panel)panel.classList.add('hidden');
+ const reader=el('global-scan-reader');if(reader)reader.innerHTML='';
+}
 function saleSetBarcode(name){const old=saleBarcodeMap()[name]||'';openModal('পণ্যের বারকোড সেট করুন',`<p class="font-bold">${esc(name)}</p><input id="sale-barcode-value" class="${INP_L}" value="${esc(old)}" placeholder="বারকোড নম্বর লিখুন"><button onclick="saleSetBarcodeSave(decodeURIComponent('${encodeURIComponent(name)}'))" class="w-full bg-emerald-600 text-white rounded-lg py-2.5 font-bold">সেভ</button>`);}
 function saleSetBarcodeSave(name){const code=el('sale-barcode-value').value.trim();if(!code){alert('বারকোড লিখুন');return;}const m=saleBarcodeMap();if(Object.keys(m).some(n=>n!==name&&String(m[n]).toLowerCase()===code.toLowerCase())){alert('এই বারকোড অন্য পণ্যে ব্যবহার হয়েছে');return;}m[name]=code;saleSaveBarcodeMap(m);closeModal();toast('বারকোড এই ডিভাইসে সেভ হয়েছে');render();}
 
