@@ -486,6 +486,7 @@ function render() {
 // ---------- নতুন বিক্রি / POS ----------
 let saleCart = [];
 let saleScanner = null;
+let saleAudioContext = null;
 const SALE_BARCODE_KEY = 'safabox_ledger_barcodes_v1';
 function saleBarcodeMap(){ try{return JSON.parse(localStorage.getItem(SALE_BARCODE_KEY)||'{}')||{};}catch(e){return {};}}
 function saleSaveBarcodeMap(m){try{localStorage.setItem(SALE_BARCODE_KEY,JSON.stringify(m));}catch(e){}}
@@ -532,7 +533,25 @@ function saleAddBatch(id){const b=state.batches.find(x=>x.id===id);if(!b||b.unso
 function saleCartPrice(i,v){const x=saleCart[i],p=num(v);if(!x)return;if(!(p>0)){toast('বিক্রয় মূল্য শূন্যের বেশি দিন');render();return;}x.price=p;render();}
 function saleCartQty(i,v){const x=saleCart[i],q=num(v);if(!x)return;if(!(q>0)){saleCart.splice(i,1);render();return;}if(x.kind==='packet'){const b=state.batches.find(y=>y.id===x.ref);if(!b||q>b.unsoldPackets){toast('অবিক্রীত প্যাকেটের চেয়ে বেশি');render();return;}}else{const it=state.map[x.item];if(!it||qin(x.item,q)>it.stock+EPS){toast('স্টকের চেয়ে বেশি');render();return;}}x.qty=x.kind==='packet'?Math.floor(q):q;render();}
 function saleRenderProducts(){const q=(el('sale-barcode')?.value||'').trim().toLowerCase();const list=state.items.filter(x=>x.stock>EPS&&(!q||x.name.toLowerCase().includes(q)||String(saleBarcodeMap()[x.name]||'').toLowerCase().includes(q)));setHtml('sale-products',saleProductCards(list));}
-function saleScanCode(raw){const code=String(raw||'').trim();if(!code)return;const map=saleBarcodeMap();let name=Object.keys(map).find(n=>String(map[n]).toLowerCase()===code.toLowerCase());if(!name){const it=state.items.find(x=>String(x.name).toLowerCase()===code.toLowerCase());if(it)name=it.name;}const idx=state.items.findIndex(x=>x.name===name);let added=null;if(idx>=0){added=state.items[idx];saleAddItem(idx);}else{const matches=state.items.filter(x=>x.name.toLowerCase().includes(code.toLowerCase()));if(matches.length===1){added=matches[0];saleAddItem(matches[0].idx);}}const result=el('sale-scan-result');if(added){if(result){result.classList.remove('hidden');result.innerHTML='<b>স্ক্যান সফল:</b> '+esc(added.name)+' — কার্টে যোগ হয়েছে। পরিমাণ ও দর নিচের কার্ট থেকে পরিবর্তন করতে পারবেন।';}const f=el('sale-barcode');if(f)f.value='';setTimeout(()=>{const cart=el('sale-cart');if(cart)cart.scrollIntoView({behavior:'smooth',block:'center'});},120);return;}toast('এই বারকোডের পণ্য পাওয়া যায়নি');if(result){result.classList.remove('hidden');result.textContent='বারকোড '+code+' কোনো পণ্যের সঙ্গে মেলেনি। পণ্যের বারকোড সেট করুন।';}saleRenderProducts();}
+function salePlayScanSuccessSound(){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx)return;
+  if(!saleAudioContext)saleAudioContext=new AudioCtx();
+  if(saleAudioContext.state==='suspended')saleAudioContext.resume().catch(()=>{});
+  const ctx=saleAudioContext,now=ctx.currentTime;
+  // বারকোড স্ক্যানারের মতো দুটি ছোট, পরিষ্কার সাকসেস বিপ।
+  [880,1320].forEach((freq,i)=>{
+   const start=now+i*0.105,osc=ctx.createOscillator(),gain=ctx.createGain();
+   osc.type='sine';osc.frequency.setValueAtTime(freq,start);
+   gain.gain.setValueAtTime(0.0001,start);
+   gain.gain.exponentialRampToValueAtTime(0.16,start+0.012);
+   gain.gain.exponentialRampToValueAtTime(0.0001,start+0.085);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+0.09);
+  });
+ }catch(e){console.warn('Scan success sound unavailable',e);}
+}
+function saleScanCode(raw){const code=String(raw||'').trim();if(!code)return;const map=saleBarcodeMap();let name=Object.keys(map).find(n=>String(map[n]).toLowerCase()===code.toLowerCase());if(!name){const it=state.items.find(x=>String(x.name).toLowerCase()===code.toLowerCase());if(it)name=it.name;}const idx=state.items.findIndex(x=>x.name===name);let added=null;if(idx>=0){added=state.items[idx];saleAddItem(idx);}else{const matches=state.items.filter(x=>x.name.toLowerCase().includes(code.toLowerCase()));if(matches.length===1){added=matches[0];saleAddItem(matches[0].idx);}}const result=el('sale-scan-result');if(added){salePlayScanSuccessSound();if(result){result.classList.remove('hidden');result.innerHTML='<b>স্ক্যান সফল:</b> '+esc(added.name)+' — কার্টে যোগ হয়েছে। পরিমাণ ও দর নিচের কার্ট থেকে পরিবর্তন করতে পারবেন।';}const f=el('sale-barcode');if(f)f.value='';setTimeout(()=>{const cart=el('sale-cart');if(cart)cart.scrollIntoView({behavior:'smooth',block:'center'});},120);return;}toast('এই বারকোডের পণ্য পাওয়া যায়নি');if(result){result.classList.remove('hidden');result.textContent='বারকোড '+code+' কোনো পণ্যের সঙ্গে মেলেনি। পণ্যের বারকোড সেট করুন।';}saleRenderProducts();}
 function saleUpdateDue(){const total=saleCart.reduce((s,x)=>s+saleLineAmount(x),0),paid=num(el('sale-paid')?.value);setHtml('sale-due',tk(Math.max(0,total-paid)));}
 async function salePickContact(){
  const phoneInput=el('sale-phone'),nameInput=el('sale-customer');
@@ -562,6 +581,7 @@ function saleCollect(id){if(!canWrite())return;const rows=db.txs.filter(t=>t.id=
 function saleCollectSave(sid){if(!canWrite())return;const amt=num(el('sale-collect-amount').value),rows=db.txs.filter(t=>t.saleId===sid);if(!rows.length)return;const total=num(rows[0].saleTotal),paid=num(rows[0].salePaid),due=total-paid;if(!(amt>0)||amt>due+0.001){alert('সঠিক আদায়ের পরিমাণ দিন');return;}rows.forEach(t=>{t.salePaid=round(paid+amt,2);t.synced=false;});logHist('edit','sale',sid,'বাকি টাকা আদায়',[['জমা',tk(paid),tk(paid+amt)]]);closeModal();refresh();toast('বাকি আদায় সেভ হয়েছে');}
 function openGlobalSaleScanner(){
     // স্ক্যানার হেডারের নিচে স্থায়ী ছোট প্যানেলে খুলবে; POS-এ নিয়ে যাবে না যতক্ষণ না স্ক্যান হয়।
+    try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(AudioCtx){if(!saleAudioContext)saleAudioContext=new AudioCtx();if(saleAudioContext.state==='suspended')saleAudioContext.resume().catch(()=>{});}}catch(e){}
     const panel=el('global-scan-panel');
     if(panel)panel.classList.remove('hidden');
     saleStartCamera();
