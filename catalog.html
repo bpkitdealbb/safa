@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>পণ্য ক্যাটালগ</title>
+<meta name="theme-color" content="#059669">
+<style>
+:root{--g:#059669;--bg:#f3f4f6;--c:#fff;--t:#111827;--m:#6b7280;--b:#e5e7eb}
+@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--c:#1e293b;--t:#f1f5f9;--m:#94a3b8;--b:#334155}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Noto Sans Bengali","Segoe UI",sans-serif;background:var(--bg);color:var(--t)}
+header{background:linear-gradient(90deg,#059669,#0f766e);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:19px}header p{margin:2px 0 0;font-size:12px;opacity:.9}
+main{max-width:760px;margin:0 auto;padding:12px 12px 40px}
+#q{width:100%;padding:11px 12px;border:1px solid var(--b);border-radius:12px;font-size:15px;background:var(--c);color:var(--t);margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{background:var(--c);border:1px solid var(--b);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.ph{aspect-ratio:1/1;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;color:#047857;font-size:34px;font-weight:800;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.in{padding:9px 10px 10px;display:flex;flex-direction:column;gap:6px;flex:1}
+.in b{font-size:14px;line-height:1.25;word-break:break-word}.d{font-size:11.5px;color:var(--m)}
+.v{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px;border-top:1px dashed var(--b);padding-top:5px}
+.v span{color:var(--m)}.v strong{color:var(--g);font-size:14px}
+.o{display:inline-block;margin-top:2px;background:#25d366;color:#fff;text-decoration:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700}
+.msg{text-align:center;color:var(--m);padding:40px 12px;font-size:14px}
+.note{background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:8px 10px;font-size:12px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header><h1 id="t">পণ্য ক্যাটালগ</h1><p id="s"></p></header>
+<main>
+<div id="note" class="note" style="display:none"></div>
+<input id="q" type="search" placeholder="পণ্য খুঁজুন…" style="display:none" autocomplete="off">
+<div id="list" class="grid"></div>
+<div id="msg" class="msg">লোড হচ্ছে…</div>
+</main>
+<script type="module">
+const CFG = {
+  apiKey: "AIzaSyC2bmAtHLQNt1nobq8y-yyDaYAsNWIEKgc",
+  authDomain: "demomixfood.firebaseapp.com",
+  projectId: "demomixfood",
+  storageBucket: "demomixfood.firebasestorage.app",
+  messagingSenderId: "905891531269",
+  appId: "1:905891531269:web:fe640a761c23f7377aea6c"
+};
+const VER = '10.14.1';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const bn = n => { try { return Number(n).toLocaleString('bn-BD', { maximumFractionDigits: 2 }); } catch (e) { return String(n); } };
+const msg = t => { $('msg').style.display = t ? '' : 'none'; $('msg').textContent = t || ''; };
+function qlabel(q, u) {
+  if (u === 'pcs') return bn(q) + ' পিস';
+  const big = q >= 1000, n = big ? q / 1000 : q;
+  return bn(n) + ' ' + (u === 'l' ? (big ? 'লিটার' : 'মি.লি.') : (big ? 'কেজি' : 'গ্রাম'));
+}
+function waNumber(p) { p = String(p || '').replace(/[^\d]/g, ''); if (!p) return ''; if (p.startsWith('880')) return p; if (p.startsWith('0')) return '88' + p; return p; }
+let DB, FS, DATA = null;
+const params = new URLSearchParams(location.search);
+const SLUG = (() => { const m = location.pathname.match(/^\/catalog\/([^\/?#]+)/); try { return m ? decodeURIComponent(m[1]).toLowerCase().replace(/[^a-z0-9-]/g, '') : ''; } catch (e) { return ''; } })();
+let UID = (params.get('u') || '').replace(/[^\w-]/g, '');
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* জায়গা ভরে গেলে চুপ */ } }
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); loadImg(e.target); } }), { rootMargin: '200px' }) : null;
+async function loadImg(box) {
+  const id = box.dataset.id, iv = box.dataset.iv, key = 'cimg:' + UID + ':' + id + ':' + iv;
+  let d = lsGet(key);
+  if (!d) {
+    try {
+      const snap = await FS.getDoc(FS.doc(DB, 'catalogs', UID, 'img', id));
+      if (snap.exists()) { d = snap.data().d; Object.keys(localStorage).filter(k => k.startsWith('cimg:' + UID + ':' + id + ':') && k !== key).forEach(k => localStorage.removeItem(k)); lsSet(key, d); }
+    } catch (e) { return; }
+  }
+  if (d) box.innerHTML = '<img alt="" src="' + d.replace(/"/g, '') + '">';
+}
+function render() {
+  const q = $('q').value.trim().toLowerCase(), wa = waNumber(DATA.ph);
+  const list = DATA.items.filter(x => !q || x.n.toLowerCase().includes(q));
+  $('list').innerHTML = list.map(x => `<div class="card"><div class="ph" data-id="${esc(x.id)}" data-iv="${x.iv || 0}">${esc((x.n || '?').trim().charAt(0))}</div><div class="in"><b>${esc(x.n)}</b>${x.d ? `<div class="d">${esc(x.d)}</div>` : ''}${(x.v || []).length ? x.v.map(v => `<div class="v"><span>${qlabel(v.q, x.u)}</span><strong>৳ ${bn(v.p)}</strong></div>`).join('') : '<div class="d">দাম জানতে যোগাযোগ করুন</div>'}${wa ? `<a class="o" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent('আসসালামু আলাইকুম, আমি "' + x.n + '" অর্ডার করতে চাই।')}">WhatsApp-এ অর্ডার</a>` : ''}</div></div>`).join('');
+  msg(list.length ? '' : (DATA.items.length ? 'কোনো পণ্য মেলেনি' : 'এখনো কোনো পণ্য প্রকাশ হয়নি'));
+  document.querySelectorAll('.ph[data-iv]').forEach(b => { if (b.dataset.iv !== '0') { if (io) io.observe(b); else loadImg(b); } });
+}
+(async () => {
+  if (!UID && !SLUG) { msg('লিংকটি সঠিক নয়। দোকানের পাঠানো পুরো লিংক ব্যবহার করুন।'); return; }
+  const base = 'https://www.gstatic.com/firebasejs/' + VER + '/';
+  try {
+    const [A, F] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js')]);
+    FS = F; DB = F.getFirestore(A.initializeApp(CFG));
+    if (!UID) {   // সুন্দর নাম → আইডি (১ দিন ফোনে জমা, তাই বারবার পড়া লাগে না)
+      let c = null; try { c = JSON.parse(lsGet('cslug:' + SLUG)); } catch (e) {}
+      if (c && c.u && Date.now() - c.t < 864e5) UID = c.u;
+      else {
+        const ss = await F.getDoc(F.doc(DB, 'catalogSlugs', SLUG));
+        if (!ss.exists()) { msg('এই নামের কোনো ক্যাটালগ পাওয়া যায়নি।'); return; }
+        UID = String(ss.data().uid || '').replace(/[^\w-]/g, ''); lsSet('cslug:' + SLUG, JSON.stringify({ u: UID, t: Date.now() }));
+      }
+    }
+    let snap;
+    try { snap = await F.getDoc(F.doc(DB, 'catalogs', UID)); }
+    catch (e) { if (e && e.code === 'permission-denied') { msg('এই ক্যাটালগটি এখন চালু নেই। (দোকানের মেয়াদ শেষ, অথবা এখনো প্রকাশ হয়নি।)'); return; } throw e; }
+    if (!snap.exists()) { msg('ক্যাটালগ পাওয়া যায়নি।'); return; }
+    DATA = snap.data(); DATA.items = Array.isArray(DATA.items) ? DATA.items : [];
+    $('t').textContent = DATA.t || 'পণ্য ক্যাটালগ'; document.title = DATA.t || 'পণ্য ক্যাটালগ';
+    $('s').textContent = bn(DATA.items.length) + 'টি পণ্য';
+    if (DATA.n) { $('note').textContent = DATA.n; $('note').style.display = ''; }
+    $('q').style.display = ''; $('q').addEventListener('input', render);
+    render();
+  } catch (e) { console.warn(e); msg('ক্যাটালগ লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।'); }
+})();
+</script>
+</body>
+</html>
