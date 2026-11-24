@@ -46,6 +46,12 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 .f input,.f textarea{width:100%;padding:10px;border:1px solid var(--b);border-radius:10px;font-size:14px;margin-top:6px;background:var(--c);color:var(--t);font-family:inherit}
 .go{display:block;width:100%;margin-top:10px;background:#25d366;color:#fff;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
 .go[disabled]{opacity:.5}
+.ov{background:var(--c);border:1px solid var(--b);border-radius:14px;padding:12px;margin-bottom:10px}
+.ol{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--b)}.ol:last-child{border-bottom:0}
+.ol .ph{width:64px;height:64px;flex:none;border-radius:10px;background:var(--sel);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--g);font-weight:800;overflow:hidden}.ol .ph img{width:100%;height:100%;object-fit:cover}
+.ol .in{flex:1;min-width:0}.ol b{font-size:14px;display:block}.ol small{color:var(--m);font-size:12px}.ol .am{font-weight:800;font-size:14px;white-space:nowrap}
+.wr{color:#b45309;font-size:11.5px;display:block}.ovt{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding-top:10px;border-top:2px solid var(--b)}
+.lk{display:block;text-align:center;margin:12px 0;color:var(--g);font-weight:700;font-size:14px}
 .x{position:absolute;top:6px;right:10px;border:0;background:transparent;color:var(--m);font-size:24px;cursor:pointer;line-height:1}
 </style>
 </head>
@@ -161,6 +167,32 @@ function renderSheet() {
 }
 function openSheet() { try { const i = JSON.parse(lsGet('cinfo') || '{}'); if (!$('cn').value) $('cn').value = i.n || ''; if (!$('ca').value) $('ca').value = i.a || ''; } catch (e) {} renderSheet(); $('sheet').style.display = 'flex'; }
 function closeSheet() { $('sheet').style.display = 'none'; }
+// ছবিসহ অর্ডারের লিংক: অর্ডারটি লিংকেই থাকে (আইডি:পরিমাণ:সংখ্যা:দাম), কোনো সার্ভারে সেভ হয় না
+function orderLink(nm, ad) {
+  const rows = [...SEL.values()].map(s => [s.id, s.q, s.c, s.p].join(':')).join(',');
+  const base = location.origin + (SLUG ? '/catalog/' + SLUG : '/catalog');
+  const q = new URLSearchParams(); if (!SLUG) q.set('u', UID); q.set('o', rows);
+  if (nm) q.set('cn', nm.slice(0, 80)); if (ad) q.set('ca', ad.slice(0, 200));
+  return base + '?' + q.toString();
+}
+function parseOrder(o) {
+  return String(o || '').split(',').slice(0, 60).map(r => r.split(':')).filter(a => a.length === 4).map(a => ({ id: a[0], q: +a[1], c: Math.max(1, Math.min(99, a[2] | 0)), p: +a[3] })).filter(r => r.id && r.q > 0 && r.p >= 0 && isFinite(r.p));
+}
+function renderOrderView() {
+  const rows = parseOrder(params.get('o')), cn = (params.get('cn') || '').slice(0, 80), ca = (params.get('ca') || '').slice(0, 200);
+  let tot = 0, warn = false;
+  const lines = rows.map(r => {
+    const x = DATA.items.find(i => i.id === r.id), v = x && (x.v || []).find(v => v.q === r.q), t = r.p * r.c; tot += t;
+    const chg = v && v.p !== r.p, gone = !x || !v; if (chg || gone) warn = true;
+    return `<div class="ol"><div class="ph" data-id="${esc(r.id)}" data-iv="${x ? (x.iv || 0) : 0}">${esc(x ? (x.n || '?').trim().charAt(0) : '?')}</div><div class="in"><b>${esc(x ? x.n : 'পণ্যটি এখন ক্যাটালগে নেই')}</b><small>${x ? qlabel(r.q, x.u) : ''} • ${tk(r.p)} × ${bn(r.c)}</small>${chg ? `<span class="wr">⚠ ক্যাটালগে এখনকার দাম ${tk(v.p)}</span>` : ''}${gone && x ? '<span class="wr">⚠ এই পরিমাণ এখন ক্যাটালগে নেই</span>' : ''}</div><div class="am">${tk(t)}</div></div>`;
+  }).join('');
+  $('sr').style.display = 'none'; $('bar').style.display = 'none';
+  $('s').textContent = 'ছবিসহ অর্ডার';
+  $('list').className = '';
+  $('list').innerHTML = rows.length ? `<div class="ov"><b style="font-size:15px">${esc(DATA.t || 'অর্ডার')} — অর্ডারের তালিকা</b>${cn || ca ? `<div style="font-size:13px;margin:6px 0;color:var(--m)">${cn ? 'নাম: <b style="color:var(--t)">' + esc(cn) + '</b>' : ''}${cn && ca ? '<br>' : ''}${ca ? 'ঠিকানা/নোট: ' + esc(ca) : ''}</div>` : ''}${lines}<div class="ovt"><span>সর্বমোট</span><span>${tk(tot)}</span></div>${warn ? '<p class="wr" style="margin-top:8px">দাম বা পণ্যে কিছু অমিল আছে, ক্রেতাকে জানিয়ে নিশ্চিত করুন।</p>' : ''}</div><a class="lk" href="${esc(location.pathname + (UID && !SLUG ? '?u=' + encodeURIComponent(UID) : ''))}">পুরো ক্যাটালগ দেখুন ›</a>` : '';
+  msg(rows.length ? '' : 'অর্ডারের লিংকটি সঠিক নয়।');
+  document.querySelectorAll('.ph[data-iv]').forEach(b => { if (b.dataset.iv !== '0') { if (io) io.observe(b); else loadImg(b); } });
+}
 function buildMessage() {
   const arr = [...SEL.values()], nm = $('cn').value.trim(), ad = $('ca').value.trim();
   let t = '*' + (DATA.t || 'অর্ডার') + '* — নতুন অর্ডার\n────────────\n';
@@ -168,6 +200,7 @@ function buildMessage() {
   t += '────────────\n*সর্বমোট: ' + tk(grand()) + '*';
   if (nm) t += '\n\nনাম: ' + nm;
   if (ad) t += '\nঠিকানা/নোট: ' + ad;
+  t += '\n\n📷 ছবিসহ অর্ডার দেখুন:\n' + orderLink(nm, ad);
   return t;
 }
 function sendWa() {
@@ -221,6 +254,7 @@ function wire() {
     if (DATA.n) { $('note').textContent = DATA.n; $('note').style.display = ''; }
     if (DATA.lg) imgData('logo', DATA.lg).then(d => { if (d) { const l = $('lg'); l.src = d; l.style.display = 'block'; } });
     $('sr').style.display = '';
+    if (params.get('o')) { renderOrderView(); return; }
     wire(); loadSel(); render(); refreshBar();
   } catch (e) { console.warn(e); msg('ক্যাটালগ লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।'); }
 })();
