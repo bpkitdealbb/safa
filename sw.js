@@ -1,15 +1,17 @@
 /* লেজার অ্যাপের সার্ভিস ওয়ার্কার: ইন্টারনেট ছাড়াও অ্যাপ খোলার জন্য।
    আপডেট দিলে নিচের VERSION সংখ্যা বাড়ান (যেমন v2), তাহলে সবার ফোনে পুরোনো ক্যাশ মুছে নতুন ফাইল আসবে। */
-const VERSION = 'ledger-shell-v3';
+const VERSION = 'ledger-shell-v5';
 const RUNTIME = 'ledger-runtime-v1';
 const SHELL = ['index-cloud.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'legal.html'];
 const CDN_HOSTS = ['cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com', 'unpkg.com'];
+const SWAL_URL = 'https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.8/sweetalert2.all.min.js';   // পপআপ লাইব্রেরি: ইনস্টলের সময়ই ক্যাশে রাখা হয়, যেন ইন্টারনেট ছাড়াও পপআপ কাজ করে
 const NAV_TIMEOUT = 4000;
 
 self.addEventListener('install', e => {
     e.waitUntil((async () => {
         const c = await caches.open(VERSION);
-        await Promise.all(SHELL.map(u => c.add(u).catch(() => {})));   // একটা ফাইল না থাকলেও ইনস্টল আটকাবে না
+        await Promise.all(SHELL.map(u => c.add(u).catch(() => {})));
+        try { const r = await fetch(SWAL_URL, { mode: 'cors' }); await putSafe(RUNTIME, SWAL_URL, r); } catch (e) {}   // একটা ফাইল না থাকলেও ইনস্টল আটকাবে না
         await self.skipWaiting();
     })());
 });
@@ -57,6 +59,7 @@ self.addEventListener('fetch', e => {
     if (req.method !== 'GET') return;
     const url = new URL(req.url);
     if (url.origin === self.location.origin) {
+        if (url.pathname === '/catalog' || url.pathname.startsWith('/catalog/') || url.pathname.startsWith('/catalog.')) return;   // পাবলিক ক্যাটালগ অ্যাপের অংশ নয়, সরাসরি নেটওয়ার্ক থেকে
         if (req.mode === 'navigate') { e.respondWith(handleNavigate(e)); return; }
         e.respondWith(handleStatic(e, VERSION));
         return;
