@@ -58,6 +58,7 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 <body>
 <header><div class="hd"><img id="lg" alt=""><div><h1 id="t">পণ্য ক্যাটালগ</h1><p id="s"></p></div></div></header>
 <main>
+<div id="dlnote" class="note" style="display:none;background:#ecfdf5;color:#065f46;border-color:#a7f3d0"></div>
 <div id="note" class="note" style="display:none"></div>
 <div class="sr" id="sr" style="display:none"><input id="q" type="search" placeholder="পণ্য খুঁজুন…" autocomplete="off"><button id="qx" aria-label="মুছুন">×</button></div>
 <div id="list" class="grid"></div>
@@ -65,7 +66,7 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 </main>
 <div id="lb"><i aria-label="বন্ধ">×</i><img alt=""></div>
 <div id="bar"><button id="barbtn"><span id="bartxt"></span><span>WhatsApp-এ অর্ডার ›</span></button></div>
-<div id="sheet"><div class="p"><button class="x" id="sx" aria-label="বন্ধ">×</button><b style="font-size:16px">আপনার অর্ডার</b><div id="lines"></div><div class="tt"><span>সর্বমোট</span><span id="tot"></span></div><div class="f"><input id="cn" placeholder="আপনার নাম (ঐচ্ছিক)" autocomplete="name"><textarea id="ca" rows="2" placeholder="ঠিকানা / নোট (ঐচ্ছিক)" autocomplete="street-address"></textarea></div><button class="go" id="send">WhatsApp-এ পাঠান</button><p id="wanote" style="font-size:11px;color:var(--m);margin:8px 0 0;text-align:center">WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।</p></div></div>
+<div id="sheet"><div class="p"><button class="x" id="sx" aria-label="বন্ধ">×</button><b style="font-size:16px">আপনার অর্ডার</b><div id="lines"></div><div class="li" id="dlrow" style="display:none"><div><b>ডেলিভারি চার্জ</b></div><b id="dlv"></b></div><div class="tt"><span>সর্বমোট</span><span id="tot"></span></div><div class="f"><input id="cn" placeholder="আপনার নাম (ঐচ্ছিক)" autocomplete="name"><textarea id="ca" rows="2" placeholder="ঠিকানা / নোট (ঐচ্ছিক)" autocomplete="street-address"></textarea></div><button class="go" id="send">WhatsApp-এ পাঠান</button><p id="wanote" style="font-size:11px;color:var(--m);margin:8px 0 0;text-align:center">WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।</p></div></div>
 <script type="module">
 const CFG = {
   apiKey: "AIzaSyC2bmAtHLQNt1nobq8y-yyDaYAsNWIEKgc",
@@ -124,6 +125,7 @@ function loadSel() {
     });
   } catch (e) {}
 }
+let DL = 0;   // ডেলিভারি চার্জ (প্রতি অর্ডারে একবার), দোকান ঠিক করে দেয়
 const lineTotal = s => s.p * s.c;
 const grand = () => [...SEL.values()].reduce((a, s) => a + lineTotal(s), 0);
 const count = () => [...SEL.values()].reduce((a, s) => a + s.c, 0);
@@ -146,7 +148,7 @@ function refreshCard(id) { const x = DATA.items.find(i => i.id === id), el = doc
 function refreshBar() {
   const n = count();
   $('bar').style.display = n ? 'block' : 'none';
-  if (n) $('bartxt').innerHTML = '<small>' + bn(n) + 'টি নির্বাচিত</small>' + tk(grand());
+  if (n) $('bartxt').innerHTML = '<small>' + bn(n) + 'টি নির্বাচিত' + (DL ? ' • ডেলিভারিসহ' : '') + '</small>' + tk(grand() + DL);
 }
 function render() {
   const q = $('q').value.trim().toLowerCase();
@@ -168,7 +170,8 @@ function renderSheet() {
   const arr = [...SEL.values()];
   if (!arr.length) { closeSheet(); return; }
   $('lines').innerHTML = arr.map(s => `<div class="li"><div><b>${esc(s.n)}</b><small>${qlabel(s.q, s.u)} • ${tk(s.p)} করে</small></div><div style="text-align:right"><span class="sb"><button data-act="dec" data-id="${esc(s.id)}" data-q="${s.q}">−</button><b>${bn(s.c)}</b><button data-act="inc" data-id="${esc(s.id)}" data-q="${s.q}">+</button></span><div style="font-weight:800;color:var(--g);margin-top:3px">${tk(lineTotal(s))}</div></div></div>`).join('');
-  $('tot').textContent = tk(grand());
+  $('dlrow').style.display = DL ? '' : 'none'; $('dlv').textContent = tk(DL);
+  $('tot').textContent = tk(grand() + DL);
   const wa = waNumber(DATA.ph);
   $('send').disabled = !wa;
   $('wanote').textContent = wa ? 'WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।' : 'এই দোকান এখনো WhatsApp নম্বর দেয়নি, তাই এখান থেকে অর্ডার পাঠানো যাচ্ছে না।';
@@ -198,7 +201,7 @@ function renderOrderView() {
   $('sr').style.display = 'none'; $('bar').style.display = 'none';
   $('s').textContent = 'ছবিসহ অর্ডার';
   $('list').className = '';
-  $('list').innerHTML = rows.length ? `<div class="ov"><b style="font-size:15px">${esc(DATA.t || 'অর্ডার')} — অর্ডারের তালিকা</b>${cn || ca ? `<div style="font-size:13px;margin:6px 0;color:var(--m)">${cn ? 'নাম: <b style="color:var(--t)">' + esc(cn) + '</b>' : ''}${cn && ca ? '<br>' : ''}${ca ? 'ঠিকানা/নোট: ' + esc(ca) : ''}</div>` : ''}${lines}<div class="ovt"><span>সর্বমোট</span><span>${tk(tot)}</span></div>${warn ? '<p class="wr" style="margin-top:8px">দাম বা পণ্যে কিছু অমিল আছে, ক্রেতাকে জানিয়ে নিশ্চিত করুন।</p>' : ''}</div><a class="lk" href="${esc(location.pathname + (UID && !SLUG ? '?u=' + encodeURIComponent(UID) : ''))}">পুরো ক্যাটালগ দেখুন ›</a>` : '';
+  $('list').innerHTML = rows.length ? `<div class="ov"><b style="font-size:15px">${esc(DATA.t || 'অর্ডার')} — অর্ডারের তালিকা</b>${cn || ca ? `<div style="font-size:13px;margin:6px 0;color:var(--m)">${cn ? 'নাম: <b style="color:var(--t)">' + esc(cn) + '</b>' : ''}${cn && ca ? '<br>' : ''}${ca ? 'ঠিকানা/নোট: ' + esc(ca) : ''}</div>` : ''}${lines}${DL ? `<div class="ol"><div class="in"><b>ডেলিভারি চার্জ</b></div><div class="am">${tk(DL)}</div></div>` : ''}<div class="ovt"><span>সর্বমোট</span><span>${tk(tot + DL)}</span></div>${warn ? '<p class="wr" style="margin-top:8px">দাম বা পণ্যে কিছু অমিল আছে, ক্রেতাকে জানিয়ে নিশ্চিত করুন।</p>' : ''}</div><a class="lk" href="${esc(location.pathname + (UID && !SLUG ? '?u=' + encodeURIComponent(UID) : ''))}">পুরো ক্যাটালগ দেখুন ›</a>` : '';
   msg(rows.length ? '' : 'অর্ডারের লিংকটি সঠিক নয়।');
   document.querySelectorAll('.ph[data-iv]').forEach(b => { if (b.dataset.iv !== '0') { if (io) io.observe(b); else loadImg(b); } });
 }
@@ -206,7 +209,8 @@ function buildMessage() {
   const arr = [...SEL.values()], nm = $('cn').value.trim(), ad = $('ca').value.trim();
   let t = '*' + (DATA.t || 'অর্ডার') + '* — নতুন অর্ডার\n────────────\n';
   arr.forEach((s, i) => { t += bn(i + 1) + '. ' + s.n + '\n    ' + qlabel(s.q, s.u) + ' (' + tk(s.p) + ') × ' + bn(s.c) + ' = ' + tk(lineTotal(s)) + '\n'; });
-  t += '────────────\n*সর্বমোট: ' + tk(grand()) + '*';
+  if (DL) t += '────────────\nপণ্যের দাম: ' + tk(grand()) + '\nডেলিভারি চার্জ: ' + tk(DL) + '\n';
+  t += '────────────\n*সর্বমোট: ' + tk(grand() + DL) + '*';
   if (nm) t += '\n\nনাম: ' + nm;
   if (ad) t += '\nঠিকানা/নোট: ' + ad;
   t += '\n\n📷 ছবিসহ অর্ডার দেখুন:\n' + orderLink();
@@ -272,6 +276,8 @@ function showData(first) {
   DATA.items = Array.isArray(DATA.items) ? DATA.items : [];
   $('t').textContent = DATA.t || 'পণ্য ক্যাটালগ'; document.title = DATA.t || 'পণ্য ক্যাটালগ';
   $('s').textContent = bn(DATA.items.length) + 'টি পণ্য';
+  DL = Math.max(0, +DATA.dl || 0);
+  if (DL) { $('dlnote').textContent = '🚚 ডেলিভারি চার্জ: ' + tk(DL) + ' (প্রতি অর্ডারে একবার, মোট বিলের সাথে যুক্ত হবে)'; $('dlnote').style.display = ''; } else $('dlnote').style.display = 'none';
   if (DATA.n) { $('note').textContent = DATA.n; $('note').style.display = ''; } else $('note').style.display = 'none';
   if (DATA.lg) imgData('logo', DATA.lg).then(d => { if (d) { const l = $('lg'); l.src = d; l.style.display = 'block'; } });
   else $('lg').style.display = 'none';
@@ -291,7 +297,7 @@ function closedNow(text) {
   if (!UID && !SLUG) { msg('লিংকটি সঠিক নয়। দোকানের পাঠানো পুরো লিংক ব্যবহার করুন।'); return; }
   if (!UID) { let c = null; try { c = JSON.parse(lsGet('cslug:' + SLUG)); } catch (e) {} if (c && c.u) UID = c.u; }
   let shown = false, fromCache = false;
-  if (UID) { try { const c = JSON.parse(lsGet(CATKEY())); if (c && c.data && Array.isArray(c.data.items)) { DATA = c.data; fromCache = true; showData(true); shown = true; msg(''); } } catch (e) {} }
+  if (UID) { try { const c = JSON.parse(lsGet(CATKEY())); if (c && c.data && Array.isArray(c.data.items)) { DATA = c.data; fromCache = true; showData(true); shown = true; } } catch (e) {} }
   try {
     await fb();
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -315,7 +321,7 @@ function closedNow(text) {
       const nd = snap.data();
       if (shown && updKey(nd) === updKey(DATA)) return;   // বদলায়নি → কিছুই করা লাগবে না
       DATA = nd; lsSet(CATKEY(), JSON.stringify({ upd: updKey(nd), data: nd }));
-      showData(!shown); shown = true; msg('');
+      showData(!shown); shown = true;
       return;
     }
   } catch (e) { console.warn(e); if (!shown) msg('ক্যাটালগ লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।'); }
