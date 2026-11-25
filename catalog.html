@@ -195,12 +195,14 @@ function parseOrder(o) {
   return String(o || '').split(',').slice(0, 60).map(r => r.includes(':') ? r.split(':') : r.split('.')).filter(a => a.length >= 3).map(a => { const x = findItem(a[0]); return { id: x ? x.id : a[0], q: +a[1], c: Math.max(1, Math.min(99, a[2] | 0)), p: a[3] !== undefined ? +a[3] : null }; }).filter(r => r.id && r.q > 0);
 }
 // মালিকের জন্য: ক্রেতাকে উত্তর/কল, আর অ্যাপে বিক্রয়-কার্ড তৈরি (অর্ডার+নম্বর লিংক থেকে অ্যাপে যায়)
+function appLink(ph, cn) { const q = new URLSearchParams(); q.set('so', params.get('o') || ''); if (ph) q.set('ph', ph); if (cn) q.set('cn', cn); return location.origin + '/?' + q.toString(); }
 function ACTS(ph, cn) {
-  const q = new URLSearchParams(); q.set('so', params.get('o') || ''); if (ph) q.set('ph', ph); if (cn) q.set('cn', cn);
-  const app = location.origin + '/?' + q.toString();
+  const app = appLink(ph, cn);
   return `<div class="acts">${ph ? `<a class="ab wa" href="https://wa.me/88${esc(ph)}" target="_blank" rel="noopener">💬 ক্রেতাকে WhatsApp-এ উত্তর দিন</a><a class="ab" href="tel:${esc(ph)}">📞 কল করুন</a>` : ''}<a class="ab sale" href="${esc(app)}">🧾 অ্যাপে বিক্রয় কার্ড তৈরি করুন (মালিক/স্টাফ)</a></div>`;
 }
 function renderOrderView() {
+  // এই ফোনে দোকানের মালিক/স্টাফ লগইন করা থাকলে (একই ডোমেইনের জমা তথ্য) অর্ডার-লিংকে চাপতেই সরাসরি অ্যাপের বিক্রয় কার্টে নেয়; ক্রেতারা এটি পায় না। ?view=1 দিলে পাতাটিই দেখায়
+  if (UID && lsGet('sbx_shopuid') === UID && !params.get('view') && params.get('o')) { msg('অ্যাপের বিক্রয় কার্টে নেওয়া হচ্ছে…'); location.replace(appLink(bdPhone(params.get('ph')), (params.get('cn') || '').slice(0, 60))); return; }
   const rows = parseOrder(params.get('o')), cn = (params.get('cn') || '').slice(0, 80), ca = (params.get('ca') || '').slice(0, 200), ph = bdPhone(params.get('ph'));
   let tot = 0, warn = false;
   const lines = rows.map(r => {
