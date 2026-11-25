@@ -17,8 +17,7 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 .sr{position:relative;margin-bottom:12px}
 #q{width:100%;padding:11px 38px 11px 12px;border:1px solid var(--b);border-radius:12px;font-size:15px;background:var(--c);color:var(--t)}
 #qx{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--m);font-size:20px;padding:4px 8px;display:none;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
-@media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.grid{display:flex;gap:10px;align-items:flex-start}.col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:10px}
 .card{background:var(--c);border:1px solid var(--b);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
 .ph{aspect-ratio:1/1;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;color:#047857;font-size:34px;font-weight:800;overflow:hidden}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
@@ -52,6 +51,7 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 .ol .in{flex:1;min-width:0}.ol b{font-size:14px;display:block}.ol small{color:var(--m);font-size:12px}.ol .am{font-weight:800;font-size:14px;white-space:nowrap}
 .wr{color:#b45309;font-size:11.5px;display:block}.ovt{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding-top:10px;border-top:2px solid var(--b)}
 .lk{display:block;text-align:center;margin:12px 0;color:var(--g);font-weight:700;font-size:14px}
+.ph[data-iv]:not([data-iv="0"]){cursor:zoom-in}#lb{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:12px}#lb img{max-width:100%;max-height:92vh;border-radius:12px;background:#fff}#lb i{position:absolute;top:10px;right:16px;color:#fff;font-size:30px;font-style:normal;cursor:pointer}
 .x{position:absolute;top:6px;right:10px;border:0;background:transparent;color:var(--m);font-size:24px;cursor:pointer;line-height:1}
 </style>
 </head>
@@ -63,6 +63,7 @@ main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
 <div id="list" class="grid"></div>
 <div id="msg" class="msg">লোড হচ্ছে…</div>
 </main>
+<div id="lb"><i aria-label="বন্ধ">×</i><img alt=""></div>
 <div id="bar"><button id="barbtn"><span id="bartxt"></span><span>WhatsApp-এ অর্ডার ›</span></button></div>
 <div id="sheet"><div class="p"><button class="x" id="sx" aria-label="বন্ধ">×</button><b style="font-size:16px">আপনার অর্ডার</b><div id="lines"></div><div class="tt"><span>সর্বমোট</span><span id="tot"></span></div><div class="f"><input id="cn" placeholder="আপনার নাম (ঐচ্ছিক)" autocomplete="name"><textarea id="ca" rows="2" placeholder="ঠিকানা / নোট (ঐচ্ছিক)" autocomplete="street-address"></textarea></div><button class="go" id="send">WhatsApp-এ পাঠান</button><p id="wanote" style="font-size:11px;color:var(--m);margin:8px 0 0;text-align:center">WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।</p></div></div>
 <script type="module">
@@ -92,22 +93,23 @@ const SLUG = (() => { const m = location.pathname.match(/^\/catalog\/([^\/?#]+)/
 let UID = (params.get('u') || '').replace(/[^\w-]/g, '');
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* জায়গা ভরে গেলে চুপ */ } }
-async function imgData(id, iv) {
-  const key = 'cimg:' + UID + ':' + id + ':' + iv;
+async function imgData(id, iv, th) {   // th=true → ছোট ছবি (img/{id}_t), না হলে বড় ছবি; ফোনে জমা থাকে, iv বদলালে নতুন করে আনে
+  const pre = th ? 'cimgt:' : 'cimg:', key = pre + UID + ':' + id + ':' + iv;
   let d = lsGet(key);
   if (d) return d;
   try {
-    const snap = await FS.getDoc(FS.doc(DB, 'catalogs', UID, 'img', id));
+    await fb();
+    const snap = await FS.getDoc(FS.doc(DB, 'catalogs', UID, 'img', th ? id + '_t' : id));
     if (snap.exists()) {
       d = snap.data().d;
-      try { Object.keys(localStorage).filter(k => k.startsWith('cimg:' + UID + ':' + id + ':') && k !== key).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+      try { Object.keys(localStorage).filter(k => k.startsWith(pre + UID + ':' + id + ':') && k !== key).forEach(k => localStorage.removeItem(k)); } catch (e) {}
       lsSet(key, d);
     }
   } catch (e) {}
   return d || '';
 }
 const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); loadImg(e.target); } }), { rootMargin: '200px' }) : null;
-async function loadImg(box) { const d = await imgData(box.dataset.id, box.dataset.iv); if (d) box.innerHTML = '<img alt="" src="' + d.replace(/"/g, '') + '">'; }
+async function loadImg(box) { const d = await imgData(box.dataset.id, box.dataset.iv, box.dataset.th === '1'); if (d) box.innerHTML = '<img alt="" src="' + d.replace(/"/g, '') + '">'; }
 
 // ---------- বাছাই (কার্ট) ----------
 const SEL = new Map();               // key = আইডি|পরিমাণ → { id, n, u, q, p, c }
@@ -149,7 +151,13 @@ function refreshBar() {
 function render() {
   const q = $('q').value.trim().toLowerCase();
   const list = DATA.items.filter(x => !q || x.n.toLowerCase().includes(q));
-  $('list').innerHTML = list.map(x => `<div class="card" data-id="${esc(x.id)}"><div class="ph" data-id="${esc(x.id)}" data-iv="${x.iv || 0}">${esc((x.n || '?').trim().charAt(0))}</div><div class="in"><b>${esc(x.n)}</b>${x.d ? `<div class="d">${esc(x.d)}</div>` : ''}<div class="vs" style="display:flex;flex-direction:column;gap:5px">${vhtml(x)}</div></div></div>`).join('');
+  const cardHtml = x => `<div class="card" data-id="${esc(x.id)}"><div class="ph" data-id="${esc(x.id)}" data-iv="${x.iv || 0}" data-th="${x.th ? 1 : 0}">${esc((x.n || '?').trim().charAt(0))}</div><div class="in"><b>${esc(x.n)}</b>${x.d ? `<div class="d">${esc(x.d)}</div>` : ''}<div class="vs" style="display:flex;flex-direction:column;gap:5px">${vhtml(x)}</div></div></div>`;
+  const nc = window.innerWidth >= 620 ? 3 : 2, L = $('list'); L.className = 'grid'; L.innerHTML = '';
+  const cols = []; for (let i = 0; i < nc; i++) { const c = document.createElement('div'); c.className = 'col'; L.appendChild(c); cols.push(c); }
+  list.forEach(x => {   // প্রতিটি পরের পণ্য সবচেয়ে ছোট কলামে বসে, তাই পণ্যের মাঝে ফাঁকা জায়গা থাকে না
+    let best = cols[0]; for (const c of cols) if (c.offsetHeight < best.offsetHeight) best = c;
+    const t = document.createElement('div'); t.innerHTML = cardHtml(x); best.appendChild(t.firstChild);
+  });
   msg(list.length ? '' : (DATA.items.length ? 'কোনো পণ্য মেলেনি' : 'এখনো কোনো পণ্য প্রকাশ হয়নি'));
   document.querySelectorAll('.ph[data-iv]').forEach(b => { if (b.dataset.iv !== '0') { if (io) io.observe(b); else loadImg(b); } });
   $('qx').style.display = $('q').value ? 'block' : 'none';
@@ -168,23 +176,24 @@ function renderSheet() {
 function openSheet() { try { const i = JSON.parse(lsGet('cinfo') || '{}'); if (!$('cn').value) $('cn').value = i.n || ''; if (!$('ca').value) $('ca').value = i.a || ''; } catch (e) {} renderSheet(); $('sheet').style.display = 'flex'; }
 function closeSheet() { $('sheet').style.display = 'none'; }
 // ছবিসহ অর্ডারের লিংক: অর্ডারটি লিংকেই থাকে (আইডি:পরিমাণ:সংখ্যা:দাম), কোনো সার্ভারে সেভ হয় না
-function orderLink(nm, ad) {
-  const rows = [...SEL.values()].map(s => [s.id, s.q, s.c, s.p].join(':')).join(',');
-  const base = location.origin + (SLUG ? '/catalog/' + SLUG : '/catalog');
-  const q = new URLSearchParams(); if (!SLUG) q.set('u', UID); q.set('o', rows);
-  if (nm) q.set('cn', nm.slice(0, 80)); if (ad) q.set('ca', ad.slice(0, 200));
-  return base + '?' + q.toString();
+function orderLink() {
+  // ছোট লিংক: পণ্যের আইডির শেষ কয়েকটি অক্ষর (অনন্য হওয়ার মতো ন্যূনতম) . পরিমাণ . সংখ্যা; দাম লিংকে থাকে না, ক্যাটালগের এখনকার দাম দেখানো হয়
+  const ids = DATA.items.map(i => i.id);
+  const short = id => { for (let n = 4; n < id.length; n++) { const t = id.slice(-n); if (ids.filter(o => o.endsWith(t)).length === 1) return t; } return id; };
+  const rows = [...SEL.values()].map(s => short(s.id) + '.' + s.q + '.' + s.c).join(',');
+  return location.origin + (SLUG ? '/catalog/' + SLUG : '/catalog?u=' + UID + '&') + (SLUG ? '?' : '') + 'o=' + rows;
 }
+function findItem(k) { const m = DATA.items.filter(i => i.id === k); if (m.length === 1) return m[0]; const e = DATA.items.filter(i => i.id.endsWith(k)); return e.length === 1 ? e[0] : null; }
 function parseOrder(o) {
-  return String(o || '').split(',').slice(0, 60).map(r => r.split(':')).filter(a => a.length === 4).map(a => ({ id: a[0], q: +a[1], c: Math.max(1, Math.min(99, a[2] | 0)), p: +a[3] })).filter(r => r.id && r.q > 0 && r.p >= 0 && isFinite(r.p));
+  return String(o || '').split(',').slice(0, 60).map(r => r.includes(':') ? r.split(':') : r.split('.')).filter(a => a.length >= 3).map(a => { const x = findItem(a[0]); return { id: x ? x.id : a[0], q: +a[1], c: Math.max(1, Math.min(99, a[2] | 0)), p: a[3] !== undefined ? +a[3] : null }; }).filter(r => r.id && r.q > 0);
 }
 function renderOrderView() {
   const rows = parseOrder(params.get('o')), cn = (params.get('cn') || '').slice(0, 80), ca = (params.get('ca') || '').slice(0, 200);
   let tot = 0, warn = false;
   const lines = rows.map(r => {
-    const x = DATA.items.find(i => i.id === r.id), v = x && (x.v || []).find(v => v.q === r.q), t = r.p * r.c; tot += t;
+    const x = DATA.items.find(i => i.id === r.id), v = x && (x.v || []).find(v => v.q === r.q); if (r.p === null) r.p = v ? v.p : 0; const t = r.p * r.c; tot += t;
     const chg = v && v.p !== r.p, gone = !x || !v; if (chg || gone) warn = true;
-    return `<div class="ol"><div class="ph" data-id="${esc(r.id)}" data-iv="${x ? (x.iv || 0) : 0}">${esc(x ? (x.n || '?').trim().charAt(0) : '?')}</div><div class="in"><b>${esc(x ? x.n : 'পণ্যটি এখন ক্যাটালগে নেই')}</b><small>${x ? qlabel(r.q, x.u) : ''} • ${tk(r.p)} × ${bn(r.c)}</small>${chg ? `<span class="wr">⚠ ক্যাটালগে এখনকার দাম ${tk(v.p)}</span>` : ''}${gone && x ? '<span class="wr">⚠ এই পরিমাণ এখন ক্যাটালগে নেই</span>' : ''}</div><div class="am">${tk(t)}</div></div>`;
+    return `<div class="ol"><div class="ph" data-id="${esc(r.id)}" data-iv="${x ? (x.iv || 0) : 0}" data-th="${x && x.th ? 1 : 0}">${esc(x ? (x.n || '?').trim().charAt(0) : '?')}</div><div class="in"><b>${esc(x ? x.n : 'পণ্যটি এখন ক্যাটালগে নেই')}</b><small>${x ? qlabel(r.q, x.u) : ''} • ${tk(r.p)} × ${bn(r.c)}</small>${chg ? `<span class="wr">⚠ ক্যাটালগে এখনকার দাম ${tk(v.p)}</span>` : ''}${gone && x ? '<span class="wr">⚠ এই পরিমাণ এখন ক্যাটালগে নেই</span>' : ''}</div><div class="am">${tk(t)}</div></div>`;
   }).join('');
   $('sr').style.display = 'none'; $('bar').style.display = 'none';
   $('s').textContent = 'ছবিসহ অর্ডার';
@@ -200,7 +209,7 @@ function buildMessage() {
   t += '────────────\n*সর্বমোট: ' + tk(grand()) + '*';
   if (nm) t += '\n\nনাম: ' + nm;
   if (ad) t += '\nঠিকানা/নোট: ' + ad;
-  t += '\n\n📷 ছবিসহ অর্ডার দেখুন:\n' + orderLink(nm, ad);
+  t += '\n\n📷 ছবিসহ অর্ডার দেখুন:\n' + orderLink();
   return t;
 }
 function sendWa() {
@@ -219,6 +228,8 @@ function onSearch() {
 }
 window.addEventListener('popstate', () => { if ($('q').value) { $('q').value = ''; render(); window.scrollTo({ top: 0 }); } });
 
+let LASTNC = window.innerWidth >= 620 ? 3 : 2;
+window.addEventListener('resize', () => { const n = window.innerWidth >= 620 ? 3 : 2; if (n !== LASTNC && DATA && !params.get('o')) { LASTNC = n; render(); } });
 function wire() {
   $('q').addEventListener('input', onSearch);
   $('qx').addEventListener('click', () => { $('q').value = ''; onSearch(); $('q').focus(); });
@@ -229,34 +240,85 @@ function wire() {
   $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) closeSheet(); });
   $('send').addEventListener('click', sendWa);
 }
-(async () => {
-  if (!UID && !SLUG) { msg('লিংকটি সঠিক নয়। দোকানের পাঠানো পুরো লিংক ব্যবহার করুন।'); return; }
-  const base = 'https://www.gstatic.com/firebasejs/' + VER + '/';
-  try {
+// ---------- ফায়ারবেস (দরকার হলে তবেই লোড) ----------
+let FBP = null;
+function fb() {
+  if (!FBP) FBP = (async () => {
+    const base = 'https://www.gstatic.com/firebasejs/' + VER + '/';
     const [A, F] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js')]);
     FS = F; DB = F.getFirestore(A.initializeApp(CFG));
-    if (!UID) {   // সুন্দর নাম → আইডি (১ দিন ফোনে জমা, তাই বারবার পড়া লাগে না)
-      let c = null; try { c = JSON.parse(lsGet('cslug:' + SLUG)); } catch (e) {}
-      if (c && c.u && Date.now() - c.t < 864e5) UID = c.u;
-      else {
-        const ss = await F.getDoc(F.doc(DB, 'catalogSlugs', SLUG));
-        if (!ss.exists()) { msg('এই নামের কোনো ক্যাটালগ পাওয়া যায়নি।'); return; }
+  })().catch(e => { FBP = null; throw e; });
+  return FBP;
+}
+// ---------- ছবিতে চাপলে বড় ছবি ----------
+document.addEventListener('click', async e => {
+  if ($('lb').style.display === 'flex') { $('lb').style.display = 'none'; return; }
+  const b = e.target.closest('.ph[data-iv]'); if (!b || b.dataset.iv === '0') return;
+  const small = b.querySelector('img'); if (small) { $('lb').querySelector('img').src = small.src; $('lb').style.display = 'flex'; }
+  const d = await imgData(b.dataset.id, b.dataset.iv, false);   // বড়টি এলে বদলে দেয়
+  if (d && $('lb').style.display === 'flex') $('lb').querySelector('img').src = d;
+  else if (d && !small) { $('lb').querySelector('img').src = d; $('lb').style.display = 'flex'; }
+});
+
+// ---------- ক্যাশ-আগে (ফোনে জমা থেকে সাথে সাথে দেখায়), পরে সার্ভারের সাথে নিঃশব্দে মেলায় ----------
+const CATKEY = () => 'ccat:' + UID;
+const updKey = d => d && d.upd ? (d.upd.seconds + '.' + d.upd.nanoseconds) : '';
+let WIRED = false;
+function syncSel() {
+  [...SEL.entries()].forEach(([k, s]) => { const x = DATA.items.find(i => i.id === s.id), v = x && (x.v || []).find(v => v.q === s.q); if (!v) SEL.delete(k); else { s.n = x.n; s.u = x.u; s.p = v.p; } });
+  saveSel();
+}
+function showData(first) {
+  DATA.items = Array.isArray(DATA.items) ? DATA.items : [];
+  $('t').textContent = DATA.t || 'পণ্য ক্যাটালগ'; document.title = DATA.t || 'পণ্য ক্যাটালগ';
+  $('s').textContent = bn(DATA.items.length) + 'টি পণ্য';
+  if (DATA.n) { $('note').textContent = DATA.n; $('note').style.display = ''; } else $('note').style.display = 'none';
+  if (DATA.lg) imgData('logo', DATA.lg).then(d => { if (d) { const l = $('lg'); l.src = d; l.style.display = 'block'; } });
+  else $('lg').style.display = 'none';
+  if (params.get('o')) { renderOrderView(); return; }
+  $('sr').style.display = '';
+  if (!WIRED) { wire(); WIRED = true; }
+  const y = window.scrollY;
+  if (first) loadSel(); else syncSel();
+  render(); refreshBar(); if ($('sheet').style.display === 'flex') renderSheet();
+  if (!first) window.scrollTo(0, y);   // নতুন আপডেট এলে ব্যবহারকারী টেরও পায় না: জায়গা বদলায় না
+}
+function closedNow(text) {
+  try { localStorage.removeItem(CATKEY()); if (SLUG) localStorage.removeItem('cslug:' + SLUG); } catch (e) {}
+  DATA = null; $('list').innerHTML = ''; $('sr').style.display = 'none'; $('bar').style.display = 'none'; $('sheet').style.display = 'none'; msg(text);
+}
+(async () => {
+  if (!UID && !SLUG) { msg('লিংকটি সঠিক নয়। দোকানের পাঠানো পুরো লিংক ব্যবহার করুন।'); return; }
+  if (!UID) { let c = null; try { c = JSON.parse(lsGet('cslug:' + SLUG)); } catch (e) {} if (c && c.u) UID = c.u; }
+  let shown = false, fromCache = false;
+  if (UID) { try { const c = JSON.parse(lsGet(CATKEY())); if (c && c.data && Array.isArray(c.data.items)) { DATA = c.data; fromCache = true; showData(true); shown = true; msg(''); } } catch (e) {} }
+  try {
+    await fb();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (!UID) {   // নাম → আইডি (একবার জানলে ফোনে স্থায়ী জমা; ক্যাটালগ বন্ধ দেখালে আবার যাচাই হয়)
+        const ss = await FS.getDoc(FS.doc(DB, 'catalogSlugs', SLUG));
+        if (!ss.exists()) { closedNow('এই নামের কোনো ক্যাটালগ পাওয়া যায়নি।'); return; }
         UID = String(ss.data().uid || '').replace(/[^\w-]/g, ''); lsSet('cslug:' + SLUG, JSON.stringify({ u: UID, t: Date.now() }));
       }
+      if (shown && Date.now() - (+lsGet('cchk:' + UID) || 0) < 120000) return;   // ২ মিনিটের মধ্যে আবার খুললে সার্ভারে যাওয়া লাগে না
+      let snap;
+      try { snap = await FS.getDoc(FS.doc(DB, 'catalogs', UID)); }
+      catch (e) {
+        if (e && e.code === 'permission-denied') {
+          if (SLUG && attempt === 0 && fromCache) { try { localStorage.removeItem('cslug:' + SLUG); } catch (x) {} const old = UID; UID = ''; try { localStorage.removeItem('ccat:' + old); } catch (x) {} shown = false; continue; }
+          closedNow('এই ক্যাটালগটি এখন চালু নেই। (দোকানের মেয়াদ শেষ, অথবা এখনো প্রকাশ হয়নি।)'); return;
+        }
+        throw e;
+      }
+      if (!snap.exists()) { closedNow('ক্যাটালগ পাওয়া যায়নি।'); return; }
+      lsSet('cchk:' + UID, String(Date.now()));
+      const nd = snap.data();
+      if (shown && updKey(nd) === updKey(DATA)) return;   // বদলায়নি → কিছুই করা লাগবে না
+      DATA = nd; lsSet(CATKEY(), JSON.stringify({ upd: updKey(nd), data: nd }));
+      showData(!shown); shown = true; msg('');
+      return;
     }
-    let snap;
-    try { snap = await F.getDoc(F.doc(DB, 'catalogs', UID)); }
-    catch (e) { if (e && e.code === 'permission-denied') { msg('এই ক্যাটালগটি এখন চালু নেই। (দোকানের মেয়াদ শেষ, অথবা এখনো প্রকাশ হয়নি।)'); return; } throw e; }
-    if (!snap.exists()) { msg('ক্যাটালগ পাওয়া যায়নি।'); return; }
-    DATA = snap.data(); DATA.items = Array.isArray(DATA.items) ? DATA.items : [];
-    $('t').textContent = DATA.t || 'পণ্য ক্যাটালগ'; document.title = DATA.t || 'পণ্য ক্যাটালগ';
-    $('s').textContent = bn(DATA.items.length) + 'টি পণ্য';
-    if (DATA.n) { $('note').textContent = DATA.n; $('note').style.display = ''; }
-    if (DATA.lg) imgData('logo', DATA.lg).then(d => { if (d) { const l = $('lg'); l.src = d; l.style.display = 'block'; } });
-    $('sr').style.display = '';
-    if (params.get('o')) { renderOrderView(); return; }
-    wire(); loadSel(); render(); refreshBar();
-  } catch (e) { console.warn(e); msg('ক্যাটালগ লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।'); }
+  } catch (e) { console.warn(e); if (!shown) msg('ক্যাটালগ লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।'); }
 })();
 </script>
 </body>
