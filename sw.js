@@ -1,6 +1,6 @@
 /* লেজার অ্যাপের সার্ভিস ওয়ার্কার: ইন্টারনেট ছাড়াও অ্যাপ খোলার জন্য।
    আপডেট দিলে নিচের VERSION সংখ্যা বাড়ান (যেমন v2), তাহলে সবার ফোনে পুরোনো ক্যাশ মুছে নতুন ফাইল আসবে। */
-const VERSION = 'ledger-shell-v6';
+const VERSION = 'ledger-shell-v7';
 const RUNTIME = 'ledger-runtime-v1';
 const SHELL = ['index-cloud.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'legal.html'];
 const CDN_HOSTS = ['cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com', 'unpkg.com'];
