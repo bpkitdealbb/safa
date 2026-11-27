@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>পণ্য ক্যাটালগ</title>
+<meta name="theme-color" content="#059669">
+<style>
+:root{--g:#059669;--bg:#f3f4f6;--c:#fff;--t:#111827;--m:#6b7280;--b:#e5e7eb;--sel:#ecfdf5}
+@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--c:#1e293b;--t:#f1f5f9;--m:#94a3b8;--b:#334155;--sel:#064e3b}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;font-family:system-ui,-apple-system,"Noto Sans Bengali","Segoe UI",sans-serif;background:var(--bg);color:var(--t)}
+header{background:linear-gradient(90deg,#059669,#0f766e);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:5}
+.hd{display:flex;align-items:center;gap:10px}
+#lg{width:42px;height:42px;border-radius:12px;object-fit:cover;background:#fff;flex:none;display:none}
+header h1{margin:0;font-size:19px;line-height:1.2;word-break:break-word}header p{margin:2px 0 0;font-size:12px;opacity:.9}
+main{max-width:760px;margin:0 auto;padding:12px 12px 110px}
+.sr{position:relative;margin-bottom:12px}
+#q{width:100%;padding:11px 38px 11px 12px;border:1px solid var(--b);border-radius:12px;font-size:15px;background:var(--c);color:var(--t)}
+#qx{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--m);font-size:20px;padding:4px 8px;display:none;cursor:pointer}
+.grid{display:flex;gap:10px;align-items:flex-start}.col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--c);border:1px solid var(--b);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.ph{aspect-ratio:1/1;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;color:#047857;font-size:34px;font-weight:800;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.in{padding:9px 8px 8px;display:flex;flex-direction:column;gap:5px;flex:1}
+.in b{font-size:14px;line-height:1.25;word-break:break-word;padding:0 2px}.d{font-size:11.5px;color:var(--m);padding:0 2px}
+.v{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px;border:1.5px solid var(--b);border-radius:10px;padding:6px 8px;cursor:pointer;user-select:none;background:transparent;color:inherit;width:100%;text-align:left;font-family:inherit}
+.v span{color:var(--m)}.v strong{color:var(--g);font-size:14px}
+.v.on{border-color:var(--g);background:var(--sel)}.v.on span{color:var(--t);font-weight:700}
+.v i{font-style:normal;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--b);display:inline-flex;align-items:center;justify-content:center;font-size:11px;margin-right:6px;flex:none;color:transparent}
+.v.on i{background:var(--g);border-color:var(--g);color:#fff}
+.vl{display:flex;align-items:center}
+.msg{text-align:center;color:var(--m);padding:40px 12px;font-size:14px}
+.note{background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:8px 10px;font-size:12px;margin-bottom:10px}
+.st{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 4px 0;font-size:12px;color:var(--m)}
+.sb{display:inline-flex;align-items:center;gap:0;border:1px solid var(--b);border-radius:9px;overflow:hidden}
+.sb button{width:30px;height:28px;border:0;background:var(--c);color:var(--t);font-size:17px;cursor:pointer}.sb b{min-width:26px;text-align:center;font-size:13px;padding:0}
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--c);border-top:1px solid var(--b);box-shadow:0 -4px 14px rgba(0,0,0,.12);display:none}
+#bar button{width:100%;max-width:736px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#25d366;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+#bar small{font-weight:600;opacity:.95;font-size:12.5px;display:block}
+#sheet{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center}
+#sheet .p{position:relative;background:var(--c);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
+.li{border-bottom:1px dashed var(--b);padding:8px 0;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.li b{font-size:13.5px;display:block}.li small{color:var(--m);font-size:11.5px}
+.tt{display:flex;justify-content:space-between;font-size:17px;font-weight:800;padding:10px 0}
+.f input,.f textarea{width:100%;padding:10px;border:1px solid var(--b);border-radius:10px;font-size:14px;margin-top:6px;background:var(--c);color:var(--t);font-family:inherit}
+.go{display:block;width:100%;margin-top:10px;background:#25d366;color:#fff;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+.go[disabled]{opacity:.5}
+.ov{background:var(--c);border:1px solid var(--b);border-radius:14px;padding:12px;margin-bottom:10px}
+.ol{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--b)}.ol:last-child{border-bottom:0}
+.ol .ph{width:64px;height:64px;flex:none;border-radius:10px;background:var(--sel);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--g);font-weight:800;overflow:hidden}.ol .ph img{width:100%;height:100%;object-fit:cover}
+.ol .in{flex:1;min-width:0}.ol b{font-size:14px;display:block}.ol small{color:var(--m);font-size:12px}.ol .am{font-weight:800;font-size:14px;white-space:nowrap}
+.wr{color:#b45309;font-size:11.5px;display:block}.ovt{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding-top:10px;border-top:2px solid var(--b)}
+.acts{display:grid;gap:8px;margin:10px 0}.ab{display:block;text-align:center;padding:11px;border-radius:12px;border:1px solid var(--b);background:var(--c);color:var(--t);font-weight:700;font-size:14px;text-decoration:none}.ab.wa{background:#16a34a;border-color:#16a34a;color:#fff}.ab.sale{background:var(--g);border-color:var(--g);color:#fff}
+.lk{display:block;text-align:center;margin:12px 0;color:var(--g);font-weight:700;font-size:14px}
+.ph[data-iv]:not([data-iv="0"]){cursor:zoom-in}#lb{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:12px}#lb img{max-width:100%;max-height:92vh;border-radius:12px;background:#fff}#lb i{position:absolute;top:10px;right:16px;color:#fff;font-size:30px;font-style:normal;cursor:pointer}
+.x{position:absolute;top:6px;right:10px;border:0;background:transparent;color:var(--m);font-size:24px;cursor:pointer;line-height:1}
+</style>
+</head>
+<body>
+<header><div class="hd"><img id="lg" alt=""><div><h1 id="t">পণ্য ক্যাটালগ</h1><p id="s"></p></div></div></header>
+<main>
+<div id="dlnote" class="note" style="display:none;background:#ecfdf5;color:#065f46;border-color:#a7f3d0"></div>
+<div id="note" class="note" style="display:none"></div>
+<div class="sr" id="sr" style="display:none"><input id="q" type="search" placeholder="পণ্য খুঁজুন…" autocomplete="off"><button id="qx" aria-label="মুছুন">×</button></div>
+<div id="list" class="grid"></div>
+<div id="msg" class="msg">লোড হচ্ছে…</div>
+</main>
+<div id="lb"><i aria-label="বন্ধ">×</i><img alt=""></div>
+<div id="bar"><button id="barbtn"><span id="bartxt"></span><span>WhatsApp-এ অর্ডার ›</span></button></div>
+<div id="sheet"><div class="p"><button class="x" id="sx" aria-label="বন্ধ">×</button><b style="font-size:16px">আপনার অর্ডার</b><div id="lines"></div><div class="li" id="dlrow" style="display:none"><div><b>ডেলিভারি চার্জ</b></div><b id="dlv"></b></div><div class="tt"><span>সর্বমোট</span><span id="tot"></span></div><div class="f"><input id="cp" inputmode="tel" placeholder="আপনার মোবাইল/WhatsApp নম্বর (০১XXXXXXXXX)" autocomplete="tel"><input id="cn" placeholder="আপনার নাম (ঐচ্ছিক)" autocomplete="name"><textarea id="ca" rows="2" placeholder="ঠিকানা / নোট (ঐচ্ছিক)" autocomplete="street-address"></textarea></div><button class="go" id="send">WhatsApp-এ পাঠান</button><p id="wanote" style="font-size:11px;color:var(--m);margin:8px 0 0;text-align:center">WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।</p></div></div>
+<script type="module">
+const CFG = {
+  apiKey: "AIzaSyC2bmAtHLQNt1nobq8y-yyDaYAsNWIEKgc",
+  authDomain: "demomixfood.firebaseapp.com",
+  projectId: "demomixfood",
+  storageBucket: "demomixfood.firebasestorage.app",
+  messagingSenderId: "905891531269",
+  appId: "1:905891531269:web:fe640a761c23f7377aea6c"
+};
+const VER = '10.14.1';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const bn = n => { try { return Number(n).toLocaleString('bn-BD', { maximumFractionDigits: 2 }); } catch (e) { return String(n); } };
+const tk = n => '৳' + bn(n);
+const msg = t => { $('msg').style.display = t ? '' : 'none'; $('msg').textContent = t || ''; };
+function qlabel(q, u) {
+  if (u === 'pcs') return bn(q) + ' পিস';
+  const big = q >= 1000, n = big ? q / 1000 : q;
+  return bn(n) + ' ' + (u === 'l' ? (big ? 'লিটার' : 'মি.লি.') : (big ? 'কেজি' : 'গ্রাম'));
+}
+function waNumber(p) { p = String(p || '').replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)).replace(/[^\d]/g, ''); if (!p) return ''; if (p.startsWith('880')) return p; if (p.startsWith('0')) return '88' + p; return p; }
+// ক্রেতার নম্বর: বাংলাদেশি মোবাইল (০১ + ৯ অঙ্ক) হলে ১১ অঙ্কের রূপ, না হলে ফাঁকা
+function bdPhone(p) { const w = waNumber(p); return /^8801\d{9}$/.test(w) ? w.slice(2) : ''; }
+let DB, FS, DATA = null;
+const params = new URLSearchParams(location.search);
+const SLUG = (() => { const m = location.pathname.match(/^\/catalog\/([^\/?#]+)/) || location.pathname.match(/^\/([^\/?#.]+)\/?$/); try { const v = m ? decodeURIComponent(m[1]).toLowerCase().replace(/[^a-z0-9-]/g, '') : ''; return v === 'catalog' ? '' : v; } catch (e) { return ''; } })();
+let UID = (params.get('u') || '').replace(/[^\w-]/g, '');
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* জায়গা ভরে গেলে চুপ */ } }
+async function imgData(id, iv, th) {   // th=true → ছোট ছবি (img/{id}_t), না হলে বড় ছবি; ফোনে জমা থাকে, iv বদলালে নতুন করে আনে
+  const pre = th ? 'cimgt:' : 'cimg:', key = pre + UID + ':' + id + ':' + iv;
+  let d = lsGet(key);
+  if (d) return d;
+  try {
+    await fb();
+    const snap = await FS.getDoc(FS.doc(DB, 'catalogs', UID, 'img', th ? id + '_t' : id));
+    if (snap.exists()) {
+      d = snap.data().d;
+      try { Object.keys(localStorage).filter(k => k.startsWith(pre + UID + ':' + id + ':') && k !== key).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+      lsSet(key, d);
+    }
+  } catch (e) {}
+  return d || '';
+}
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); loadImg(e.target); } }), { rootMargin: '200px' }) : null;
+async function loadImg(box) { const d = await imgData(box.dataset.id, box.dataset.iv, box.dataset.th === '1'); if (d) box.innerHTML = '<img alt="" src="' + d.replace(/"/g, '') + '">'; }
+
+// ---------- বাছাই (কার্ট) ----------
+const SEL = new Map();               // key = আইডি|পরিমাণ → { id, n, u, q, p, c }
+const key = (id, q) => id + '|' + q;
+const CK = () => 'ccart:' + UID;
+function saveSel() { lsSet(CK(), JSON.stringify([...SEL.values()])); }
+function loadSel() {
+  try {
+    (JSON.parse(lsGet(CK()) || '[]') || []).forEach(s => {
+      const x = DATA.items.find(i => i.id === s.id), v = x && (x.v || []).find(v => v.q === s.q);
+      if (v) SEL.set(key(s.id, s.q), { id: s.id, n: x.n, u: x.u, q: v.q, p: v.p, c: Math.max(1, Math.min(99, s.c | 0)) });   // দাম সবসময় এখনকার প্রকাশিত দাম
+    });
+  } catch (e) {}
+}
+let DL = 0;   // ডেলিভারি চার্জ (প্রতি অর্ডারে একবার), দোকান ঠিক করে দেয়
+const lineTotal = s => s.p * s.c;
+const grand = () => [...SEL.values()].reduce((a, s) => a + lineTotal(s), 0);
+const count = () => [...SEL.values()].reduce((a, s) => a + s.c, 0);
+function vhtml(x) {
+  if (!(x.v || []).length) return '<div class="d">দাম জানতে যোগাযোগ করুন</div>';
+  return x.v.map(v => {
+    const s = SEL.get(key(x.id, v.q));
+    return `<button class="v ${s ? 'on' : ''}" data-id="${esc(x.id)}" data-q="${v.q}"><span class="vl"><i>✓</i><span>${qlabel(v.q, x.u)}</span></span><strong>${tk(v.p)}</strong></button>${s ? `<div class="st"><span>কয়টি?</span><span class="sb"><button data-act="dec" data-id="${esc(x.id)}" data-q="${v.q}" aria-label="কমান">−</button><b>${bn(s.c)}</b><button data-act="inc" data-id="${esc(x.id)}" data-q="${v.q}" aria-label="বাড়ান">+</button></span></div>` : ''}`;
+  }).join('');
+}
+function changeSel(id, q, act) {
+  const x = DATA.items.find(i => i.id === id), v = x && (x.v || []).find(v => v.q === q); if (!v) return;
+  const k = key(id, q), s = SEL.get(k);
+  if (act === 'toggle') { if (s) SEL.delete(k); else SEL.set(k, { id, n: x.n, u: x.u, q, p: v.p, c: 1 }); }
+  else if (act === 'inc' && s) s.c = Math.min(99, s.c + 1);
+  else if (act === 'dec' && s) { if (s.c <= 1) SEL.delete(k); else s.c--; }
+  saveSel(); refreshCard(id); refreshBar(); if ($('sheet').style.display === 'flex') renderSheet();
+}
+function refreshCard(id) { const x = DATA.items.find(i => i.id === id), el = document.querySelector('.card[data-id="' + CSS.escape(id) + '"] .vs'); if (x && el) el.innerHTML = vhtml(x); }
+function refreshBar() {
+  const n = count();
+  $('bar').style.display = n ? 'block' : 'none';
+  if (n) $('bartxt').innerHTML = '<small>' + bn(n) + 'টি নির্বাচিত' + (DL ? ' • ডেলিভারিসহ' : '') + '</small>' + tk(grand() + DL);
+}
+function render() {
+  const q = $('q').value.trim().toLowerCase();
+  const list = DATA.items.filter(x => !q || x.n.toLowerCase().includes(q));
+  const cardHtml = x => `<div class="card" data-id="${esc(x.id)}"><div class="ph" data-id="${esc(x.id)}" data-iv="${x.iv || 0}" data-th="${x.th ? 1 : 0}">${esc((x.n || '?').trim().charAt(0))}</div><div class="in"><b>${esc(x.n)}</b>${x.d ? `<div class="d">${esc(x.d)}</div>` : ''}<div class="vs" style="display:flex;flex-direction:column;gap:5px">${vhtml(x)}</div></div></div>`;
+  const nc = window.innerWidth >= 620 ? 3 : 2, L = $('list'); L.className = 'grid'; L.innerHTML = '';
+  const cols = []; for (let i = 0; i < nc; i++) { const c = document.createElement('div'); c.className = 'col'; L.appendChild(c); cols.push(c); }
+  list.forEach(x => {   // প্রতিটি পরের পণ্য সবচেয়ে ছোট কলামে বসে, তাই পণ্যের মাঝে ফাঁকা জায়গা থাকে না
+    let best = cols[0]; for (const c of cols) if (c.offsetHeight < best.offsetHeight) best = c;
+    const t = document.createElement('div'); t.innerHTML = cardHtml(x); best.appendChild(t.firstChild);
+  });
+  msg(list.length ? '' : (DATA.items.length ? 'কোনো পণ্য মেলেনি' : 'এখনো কোনো পণ্য প্রকাশ হয়নি'));
+  document.querySelectorAll('.ph[data-iv]').forEach(b => { if (b.dataset.iv !== '0') { if (io) io.observe(b); else loadImg(b); } });
+  $('qx').style.display = $('q').value ? 'block' : 'none';
+}
+
+// ---------- অর্ডার শিট ও WhatsApp মেসেজ ----------
+function renderSheet() {
+  const arr = [...SEL.values()];
+  if (!arr.length) { closeSheet(); return; }
+  $('lines').innerHTML = arr.map(s => `<div class="li"><div><b>${esc(s.n)}</b><small>${qlabel(s.q, s.u)} • ${tk(s.p)} করে</small></div><div style="text-align:right"><span class="sb"><button data-act="dec" data-id="${esc(s.id)}" data-q="${s.q}">−</button><b>${bn(s.c)}</b><button data-act="inc" data-id="${esc(s.id)}" data-q="${s.q}">+</button></span><div style="font-weight:800;color:var(--g);margin-top:3px">${tk(lineTotal(s))}</div></div></div>`).join('');
+  $('dlrow').style.display = DL ? '' : 'none'; $('dlv').textContent = tk(DL);
+  $('tot').textContent = tk(grand() + DL);
+  const wa = waNumber(DATA.ph);
+  $('send').disabled = !wa;
+  $('wanote').textContent = wa ? 'WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।' : 'এই দোকান এখনো WhatsApp নম্বর দেয়নি, তাই এখান থেকে অর্ডার পাঠানো যাচ্ছে না।';
+}
+function openSheet() { try { const i = JSON.parse(lsGet('cinfo') || '{}'); if (!$('cn').value) $('cn').value = i.n || ''; if (!$('cp').value) $('cp').value = i.p || ''; if (!$('ca').value) $('ca').value = i.a || ''; } catch (e) {} renderSheet(); $('sheet').style.display = 'flex'; }
+function closeSheet() { $('sheet').style.display = 'none'; }
+// ছবিসহ অর্ডারের লিংক: অর্ডারটি লিংকেই থাকে (আইডি:পরিমাণ:সংখ্যা:দাম), কোনো সার্ভারে সেভ হয় না
+function orderLink() {
+  // ছোট লিংক: পণ্যের আইডির শেষ কয়েকটি অক্ষর (অনন্য হওয়ার মতো ন্যূনতম) . পরিমাণ . সংখ্যা; দাম লিংকে থাকে না, ক্যাটালগের এখনকার দাম দেখানো হয়
+  const ids = DATA.items.map(i => i.id);
+  const short = id => { for (let n = 4; n < id.length; n++) { const t = id.slice(-n); if (ids.filter(o => o.endsWith(t)).length === 1) return t; } return id; };
+  const rows = [...SEL.values()].map(s => short(s.id) + '.' + s.q + '.' + s.c).join(',');
+  const ph = bdPhone($('cp').value), nm = encodeURIComponent($('cn').value.trim().slice(0, 30));
+  return location.origin + (SLUG ? '/' + SLUG : '/catalog?u=' + UID + '&') + (SLUG ? '?' : '') + 'o=' + rows + (ph ? '&ph=' + ph : '') + (nm ? '&cn=' + nm : '');
+}
+function findItem(k) { const m = DATA.items.filter(i => i.id === k); if (m.length === 1) return m[0]; const e = DATA.items.filter(i => i.id.endsWith(k)); return e.length === 1 ? e[0] : null; }
+function parseOrder(o) {
+  return String(o || '').split(',').slice(0, 60).map(r => r.includes(':') ? r.split(':') : r.split('.')).filter(a => a.length >= 3).map(a => { const x = findItem(a[0]); return { id: x ? x.id : a[0], q: +a[1], c: Math.max(1, Math.min(99, a[2] | 0)), p: a[3] !== undefined ? +a[3] : null }; }).filter(r => r.id && r.q > 0);
+}
+// মালিকের জন্য: ক্রেতাকে উত্তর/কল, আর অ্যাপে বিক্রয়-কার্ড তৈরি (অর্ডার+নম্বর লিংক থেকে অ্যাপে যায়)
+function appLink(ph, cn) { const q = new URLSearchParams(); q.set('so', params.get('o') || ''); if (ph) q.set('ph', ph); if (cn) q.set('cn', cn); return location.origin + '/?' + q.toString(); }
+function ACTS(ph, cn) {
+  const app = appLink(ph, cn);
+  return `<div class="acts">${ph ? `<a class="ab wa" href="https://wa.me/88${esc(ph)}" target="_blank" rel="noopener">💬 ক্রেতাকে WhatsApp-এ উত্তর দিন</a><a class="ab" href="tel:${esc(ph)}">📞 কল করুন</a>` : ''}<a class="ab sale" href="${esc(app)}">🧾 অ্যাপে বিক্রয় কার্ড তৈরি করুন (মালিক/স্টাফ)</a></div>`;
+}
+function renderOrderView() {
+  // এই ফোনে দোকানের মালিক/স্টাফ লগইন করা থাকলে (একই ডোমেইনের জমা তথ্য) অর্ডার-লিংকে চাপতেই সরাসরি অ্যাপের বিক্রয় কার্টে নেয়; ক্রেতারা এটি পায় না। ?view=1 দিলে পাতাটিই দেখায়
+  if (UID && lsGet('sbx_shopuid') === UID && !params.get('view') && params.get('o')) { msg('অ্যাপের বিক্রয় কার্টে নেওয়া হচ্ছে…'); location.replace(appLink(bdPhone(params.get('ph')), (params.get('cn') || '').slice(0, 60))); return; }
+  const rows = parseOrder(params.get('o')), cn = (params.get('cn') || '').slice(0, 80), ca = (params.get('ca') || '').slice(0, 200), ph = bdPhone(params.get('ph'));
+  let tot = 0, warn = false;
+  const lines = rows.map(r => {
+    const x = DATA.items.find(i => i.id === r.id), v = x && (x.v || []).find(v => v.q === r.q); if (r.p === null) r.p = v ? v.p : 0; const t = r.p * r.c; tot += t;
+    const chg = v && v.p !== r.p, gone = !x || !v; if (chg || gone) warn = true;
+    return `<div class="ol"><div class="ph" data-id="${esc(r.id)}" data-iv="${x ? (x.iv || 0) : 0}" data-th="${x && x.th ? 1 : 0}">${esc(x ? (x.n || '?').trim().charAt(0) : '?')}</div><div class="in"><b>${esc(x ? x.n : 'পণ্যটি এখন ক্যাটালগে নেই')}</b><small>${x ? qlabel(r.q, x.u) : ''} • ${tk(r.p)} × ${bn(r.c)}</small>${chg ? `<span class="wr">⚠ ক্যাটালগে এখনকার দাম ${tk(v.p)}</span>` : ''}${gone && x ? '<span class="wr">⚠ এই পরিমাণ এখন ক্যাটালগে নেই</span>' : ''}</div><div class="am">${tk(t)}</div></div>`;
+  }).join('');
+  $('sr').style.display = 'none'; $('bar').style.display = 'none';
+  $('s').textContent = 'ছবিসহ অর্ডার';
+  $('list').className = '';
+  $('list').innerHTML = rows.length ? `<div class="ov"><b style="font-size:15px">${esc(DATA.t || 'অর্ডার')} — অর্ডারের তালিকা</b>${cn || ca || ph ? `<div style="font-size:13px;margin:6px 0;color:var(--m)">${cn ? 'নাম: <b style="color:var(--t)">' + esc(cn) + '</b><br>' : ''}${ph ? 'মোবাইল: <b style="color:var(--t)">' + esc(ph) + '</b><br>' : ''}${ca ? 'ঠিকানা/নোট: ' + esc(ca) : ''}</div>` : ''}${lines}${DL ? `<div class="ol"><div class="in"><b>ডেলিভারি চার্জ</b></div><div class="am">${tk(DL)}</div></div>` : ''}<div class="ovt"><span>সর্বমোট</span><span>${tk(tot + DL)}</span></div>${warn ? '<p class="wr" style="margin-top:8px">দাম বা পণ্যে কিছু অমিল আছে, ক্রেতাকে জানিয়ে নিশ্চিত করুন।</p>' : ''}</div>${ACTS(ph, cn)}<a class="lk" href="${esc(location.pathname + (UID && !SLUG ? '?u=' + encodeURIComponent(UID) : ''))}">পুরো ক্যাটালগ দেখুন ›</a>` : '';
+  msg(rows.length ? '' : 'অর্ডারের লিংকটি সঠিক নয়।');
+  document.querySelectorAll('.ph[data-iv]').forEach(b => { if (b.dataset.iv !== '0') { if (io) io.observe(b); else loadImg(b); } });
+}
+function buildMessage() {
+  const arr = [...SEL.values()], nm = $('cn').value.trim(), ad = $('ca').value.trim(), ph = bdPhone($('cp').value);
+  let t = '*' + (DATA.t || 'অর্ডার') + '* — নতুন অর্ডার\n────────────\n';
+  arr.forEach((s, i) => { t += bn(i + 1) + '. ' + s.n + '\n    ' + qlabel(s.q, s.u) + ' (' + tk(s.p) + ') × ' + bn(s.c) + ' = ' + tk(lineTotal(s)) + '\n'; });
+  if (DL) t += '────────────\nপণ্যের দাম: ' + tk(grand()) + '\nডেলিভারি চার্জ: ' + tk(DL) + '\n';
+  t += '────────────\n*সর্বমোট: ' + tk(grand() + DL) + '*';
+  t += '\n';
+  if (nm) t += '\nনাম: ' + nm;
+  if (ph) t += '\nমোবাইল: ' + ph;
+  if (ad) t += '\nঠিকানা/নোট: ' + ad;
+  t += '\n\n⚠️ দ্রুত অর্ডার নিশ্চিত করতে মেসেজটি (নিচের লিংকসহ) না বদলে সরাসরি পাঠিয়ে দিন।\n\n✅ অর্ডার কনফার্ম লিংক (মালিকের জন্য):\n' + orderLink();
+  return t;
+}
+function sendWa() {
+  const wa = waNumber(DATA.ph); if (!wa || !SEL.size) return;
+  if (!bdPhone($('cp').value)) { const w = $('wanote'); w.textContent = 'অর্ডারের জন্য আপনার সঠিক মোবাইল নম্বর দিন (যেমন ০১৭XXXXXXXX)।'; w.style.color = '#dc2626'; $('cp').focus(); return; }
+  $('wanote').style.color = ''; $('wanote').textContent = 'WhatsApp খুললে মেসেজ তৈরি থাকবে, আপনি শুধু "Send" চাপবেন।';
+  lsSet('cinfo', JSON.stringify({ n: $('cn').value.trim(), a: $('ca').value.trim(), p: $('cp').value.trim() }));
+  const url = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(buildMessage());
+  if (!window.open(url, '_blank', 'noopener')) location.href = url;
+}
+
+// ---------- সার্চ: ব্যাক চাপলে সব পণ্যের পাতায় ফেরা ----------
+function onSearch() {
+  const has = $('q').value.trim() !== '';
+  if (has && !(history.state && history.state.s)) history.pushState({ s: 1 }, '');
+  if (!has && history.state && history.state.s) { render(); history.back(); return; }
+  render();
+}
+window.addEventListener('popstate', () => { if ($('q').value) { $('q').value = ''; render(); window.scrollTo({ top: 0 }); } });
+
+let LASTNC = window.innerWidth >= 620 ? 3 : 2;
+window.addEventListener('resize', () => { const n = window.innerWidth >= 620 ? 3 : 2; if (n !== LASTNC && DATA && !params.get('o')) { LASTNC = n; render(); } });
+function wire() {
+  $('q').addEventListener('input', onSearch);
+  $('qx').addEventListener('click', () => { $('q').value = ''; onSearch(); $('q').focus(); });
+  $('list').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (!b) return; changeSel(b.dataset.id, +b.dataset.q, b.dataset.act || 'toggle'); });
+  $('lines').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) changeSel(b.dataset.id, +b.dataset.q, b.dataset.act); });
+  $('barbtn').addEventListener('click', openSheet);
+  $('sx').addEventListener('click', closeSheet);
+  $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) closeSheet(); });
+  $('send').addEventListener('click', sendWa);
+}
+// ---------- ফায়ারবেস (দরকার হলে তবেই লোড) ----------
+let FBP = null;
+function fb() {
+  if (!FBP) FBP = (async () => {
+    const base = 'https://www.gstatic.com/firebasejs/' + VER + '/';
+    const [A, F] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js')]);
+    FS = F; DB = F.getFirestore(A.initializeApp(CFG));
+  })().catch(e => { FBP = null; throw e; });
+  return FBP;
+}
+// ---------- ছবিতে চাপলে বড় ছবি ----------
+document.addEventListener('click', async e => {
+  if ($('lb').style.display === 'flex') { $('lb').style.display = 'none'; return; }
+  const b = e.target.closest('.ph[data-iv]'); if (!b || b.dataset.iv === '0') return;
+  const small = b.querySelector('img'); if (small) { $('lb').querySelector('img').src = small.src; $('lb').style.display = 'flex'; }
+  const d = await imgData(b.dataset.id, b.dataset.iv, false);   // বড়টি এলে বদলে দেয়
+  if (d && $('lb').style.display === 'flex') $('lb').querySelector('img').src = d;
+  else if (d && !small) { $('lb').querySelector('img').src = d; $('lb').style.display = 'flex'; }
+});
+
+// ---------- ক্যাশ-আগে (ফোনে জমা থেকে সাথে সাথে দেখায়), পরে সার্ভারের সাথে নিঃশব্দে মেলায় ----------
+const CATKEY = () => 'ccat:' + UID;
+const updKey = d => d && d.upd ? (d.upd.seconds + '.' + d.upd.nanoseconds) : '';
+let WIRED = false;
+function syncSel() {
+  [...SEL.entries()].forEach(([k, s]) => { const x = DATA.items.find(i => i.id === s.id), v = x && (x.v || []).find(v => v.q === s.q); if (!v) SEL.delete(k); else { s.n = x.n; s.u = x.u; s.p = v.p; } });
+  saveSel();
+}
+function showData(first) {
+  DATA.items = Array.isArray(DATA.items) ? DATA.items : [];
+  $('t').textContent = DATA.t || 'পণ্য ক্যাটালগ'; document.title = DATA.t || 'পণ্য ক্যাটালগ';
+  $('s').textContent = bn(DATA.items.length) + 'টি পণ্য';
+  DL = Math.max(0, +DATA.dl || 0);
+  if (DL) { $('dlnote').textContent = '🚚 ডেলিভারি চার্জ: ' + tk(DL) + ' (প্রতি অর্ডারে একবার, মোট বিলের সাথে যুক্ত হবে)'; $('dlnote').style.display = ''; } else $('dlnote').style.display = 'none';
+  if (DATA.n) { $('note').textContent = DATA.n; $('note').style.display = ''; } else $('note').style.display = 'none';
+  if (DATA.lg) imgData('logo', DATA.lg).then(d => { if (d) { const l = $('lg'); l.src = d; l.style.display = 'block'; } });
+  else $('lg').style.display = 'none';
+  if (params.get('o')) { renderOrderView(); return; }
+  $('sr').style.display = '';
+  if (!WIRED) { wire(); WIRED = true; }
+  const y = window.scrollY;
+  if (first) loadSel(); else syncSel();
+  render(); refreshBar(); if ($('sheet').style.display === 'flex') renderSheet();
+  if (!first) window.scrollTo(0, y);   // নতুন আপডেট এলে ব্যবহারকারী টেরও পায় না: জায়গা বদলায় না
+}
+function closedNow(text) {
+  try { localStorage.removeItem(CATKEY()); if (SLUG) localStorage.removeItem('cslug:' + SLUG); } catch (e) {}
+  DATA = null; $('list').innerHTML = ''; $('sr').style.display = 'none'; $('bar').style.display = 'none'; $('sheet').style.display = 'none'; msg(text);
+}
+(async () => {
+  if (!UID && !SLUG) { msg('লিংকটি সঠিক নয়। দোকানের পাঠানো পুরো লিংক ব্যবহার করুন।'); return; }
+  if (!UID) { let c = null; try { c = JSON.parse(lsGet('cslug:' + SLUG)); } catch (e) {} if (c && c.u) UID = c.u; }
+  let shown = false, fromCache = false;
+  if (UID) { try { const c = JSON.parse(lsGet(CATKEY())); if (c && c.data && Array.isArray(c.data.items)) { DATA = c.data; fromCache = true; showData(true); shown = true; } } catch (e) {} }
+  try {
+    await fb();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (!UID) {   // নাম → আইডি (একবার জানলে ফোনে স্থায়ী জমা; ক্যাটালগ বন্ধ দেখালে আবার যাচাই হয়)
+        const ss = await FS.getDoc(FS.doc(DB, 'catalogSlugs', SLUG));
+        if (!ss.exists()) { closedNow('এই নামের কোনো ক্যাটালগ পাওয়া যায়নি।'); return; }
+        UID = String(ss.data().uid || '').replace(/[^\w-]/g, ''); lsSet('cslug:' + SLUG, JSON.stringify({ u: UID, t: Date.now() }));
+      }
+      if (shown && Date.now() - (+lsGet('cchk:' + UID) || 0) < 120000) return;   // ২ মিনিটের মধ্যে আবার খুললে সার্ভারে যাওয়া লাগে না
+      let snap;
+      try { snap = await FS.getDoc(FS.doc(DB, 'catalogs', UID)); }
+      catch (e) {
+        if (e && e.code === 'permission-denied') {
+          if (SLUG && attempt === 0 && fromCache) { try { localStorage.removeItem('cslug:' + SLUG); } catch (x) {} const old = UID; UID = ''; try { localStorage.removeItem('ccat:' + old); } catch (x) {} shown = false; continue; }
+          closedNow('এই ক্যাটালগটি এখন চালু নেই। (দোকানের মেয়াদ শেষ, অথবা এখনো প্রকাশ হয়নি।)'); return;
+        }
+        throw e;
+      }
+      if (!snap.exists()) { closedNow('ক্যাটালগ পাওয়া যায়নি।'); return; }
+      lsSet('cchk:' + UID, String(Date.now()));
+      const nd = snap.data();
+      if (shown && updKey(nd) === updKey(DATA)) return;   // বদলায়নি → কিছুই করা লাগবে না
+      DATA = nd; lsSet(CATKEY(), JSON.stringify({ upd: updKey(nd), data: nd }));
+      showData(!shown); shown = true;
+      return;
+    }
+  } catch (e) { console.warn(e); if (!shown) msg('ক্যাটালগ লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।'); }
+})();
+</script>
+</body>
+</html>
